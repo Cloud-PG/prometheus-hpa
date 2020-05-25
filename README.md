@@ -3,7 +3,7 @@
 ## The problem
 This repository contains code to deploy an horizontal pod autoscaler on Kubernetes cluster that scales a Deployment according to a Custom Metric collected by Prometheus.
 
-![Overview](hpa.png)
+![Overview](hpa_.png)
 
 
 ## Requirements
