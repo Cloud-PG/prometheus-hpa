@@ -9,7 +9,7 @@ This repository contains code to deploy an horizontal pod autoscaler on Kubernet
 This requires a Kubernetes cluster v1.18 with a [kube-eagle](kube-eagle/kube-eagle.yaml) installation and [process-exporter](process_exporter/process_exporter_deployment.yaml) installation. An [httpgo server](httpgo/httpgo.yaml) should also be installed.
 
 ## Quick Start
-Prometheus manifest is [this](prometheus/prometheus.yaml), it is set to scrape kube-eagle service (static_config, subsititute default kube-eagle service cluster-IP value with the one of your cluster) and process_exporter pod (kubernetes_sd_configs). The prometheus webUI is available at ```http://<masternode-publicIP>:<PrometheusService-nodePort>```.
+Prometheus manifest is [this](prometheus/prometheus.yaml), it is set to scrape kube-eagle service (static_config, subsititute kube-eagle-service-cluster-IP with the real value in your cluster) and process_exporter pod (kubernetes_sd_configs). The prometheus webUI is available at ```http://<masternode-publicIP>:<PrometheusService-nodePort>```.
 
 As an example, the [prometheus_adapter](prometheus/prometheus_adapter.yaml) is set to look for a particular metric (```process_exporter_load1``` renamed as ```process_exporter_test```) and exposes it through Custom Metrics API. This can be seen running the command
 ````
