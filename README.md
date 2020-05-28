@@ -6,14 +6,44 @@ This repository contains code to deploy an horizontal pod autoscaler on Kubernet
 ![Overview](hpa_.png)
 
 ## Requirements
-This requires a Kubernetes cluster v1.18 with a [kube-eagle](kube-eagle/kube-eagle.yaml) installation and [process-exporter](process_exporter/process_exporter_deployment.yaml) installation. An [httpgo server](httpgo/httpgo.yaml) should also be installed.
+This requires a Kubernetes cluster v1.18. 
 
 ## Quick Start
-Prometheus manifest is [this](prometheus/prometheus.yaml), it is set to scrape kube-eagle service (static_config, subsititute kube-eagle-service-cluster-IP with the real value in your cluster) and process_exporter pod (kubernetes_sd_configs). The prometheus webUI is available at ```http://<masternode-publicIP>:<PrometheusService-nodePort>```.
+First of all, let's deploy two Prometheus exporters which make a certain list of metrics available to Prometheus:
+- the first one is [kube-eagle](https://github.com/cloudworkz/kube-eagle) which is a standard Prometheus exporter:
+    ```
+    $ kubectl apply -f manifests/kube-eagle.yaml
+    ```
+- the second one is a custom process exporter whose image is built starting from this [go script](process_exporter/process_exporter.go) and with this [Dockerfile](process_exporter/Dockerfile)
+    ```
+    $ kubectl apply -f manifests/process_exporter_deployment.yaml
+    ```
 
-As an example, the [prometheus_adapter](prometheus/prometheus_adapter.yaml) is set to look for a particular metric (```process_exporter_load1``` renamed as ```process_exporter_test```) and exposes it through Custom Metrics API. This can be seen running the command
+Then, let's deploy an [httpgo server](httpgo/httpgo.yaml) and an ingress.
+
+Then, with 
+
+Now we have to deploy a Prometheus server (https://prometheus.io/docs/introduction/overview/).
+In order to make it scrape kube-eagle service and process_exporter pod, in ```manifests/prometheus.yaml``` subsititute ```kube-eagle-service-cluster-IP``` with the real value in your cluster, which could be obtained with 
+```
+$ kubectl describe service kube-eagle -n monitoring
+```
+Then, let's deploy the Prometheus server
+```
+$ kubectl apply -f manifests/prometheus.yaml
+```
+
+The prometheus webUI is available at ```http://<masternode-publicIP>:<PrometheusService-nodePort>```.
+
+As an example, let's deploy a [prometheus_adapter](https://github.com/DirectXMan12/k8s-prometheus-adapter) which is set to look for a particular metric (```process_exporter_load1``` renamed as ```process_exporter_test```) and exposes it through Custom Metrics API. 
+So, run
 ````
-$kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1/ | jq
+$ kubectl apply -f manifests/prometheus_adapter.yaml
+````
+
+The exposed metrics can be seen running:
+````
+$ kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1/ | jq
 {
   "kind": "APIResourceList",
   "apiVersion": "v1",
@@ -32,7 +62,24 @@ $kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1/ | jq
 }
 ````
 
-Then, an [horizontal pod autoscaler](hpa/hpa.yaml) is set to scale httpgo deployment according to the exposed metric. To see if scaling is active:
+Finally, let's deploy an [horizontal pod autoscaler](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) which is set to scale httpgo deployment according to the exposed metric. 
+````
+$ kubectl apply -f manifests/hpa.yaml
+````
+
+Now, let's generate some load on our system:
+```
+hey -q 10 -c 1 -z 1m http://<name_of_your_node>/http
+```
+(the name of the node can be obtained with 
+
+```
+$ kubectl get nodes
+```
+
+This should make our metric rise above the previously-set threshold and the horizontal pod autoscaler should get in action scaling httpgo deployment. 
+
+To see if scaling is active:
 ````
 $ kubectl describe hpa
 Name:                                                             httpgo-hpa
