@@ -6,7 +6,7 @@ This repository contains code to deploy an horizontal pod autoscaler on Kubernet
 ![Overview](hpa_.png)
 
 ## Requirements
-This requires a Kubernetes cluster v1.18. 
+This requires a Kubernetes cluster v1.14 or higher. 
 
 ## Quick Start
 First of all, let's deploy two Prometheus exporters which make a certain list of metrics available to Prometheus:
@@ -19,9 +19,11 @@ First of all, let's deploy two Prometheus exporters which make a certain list of
     $ kubectl apply -f manifests/process_exporter_deployment.yaml
     ```
 
-Then, let's deploy an [httpgo server](httpgo/httpgo.yaml) and an ingress.
-
-Then, with 
+Then, let's deploy an [httpgo server](httpgo/httpgo.yaml) and an ingress:
+    ```
+    $ kubectl apply -f manifests/httpgo.yaml
+    $ kubectl apply -f manifests/ingress.yaml
+    ```
 
 Now we have to deploy a Prometheus server (https://prometheus.io/docs/introduction/overview/).
 In order to make it scrape kube-eagle service and process_exporter pod, in ```manifests/prometheus.yaml``` subsititute ```kube-eagle-service-cluster-IP``` with the real value in your cluster, which could be obtained with 
@@ -69,9 +71,12 @@ $ kubectl apply -f manifests/hpa.yaml
 
 Now, let's generate some load on our system:
 ```
-hey -q 10 -c 1 -z 1m http://<name_of_your_node>/http
+$ go get -u github.com/rakyll/hey
+$ export GOPATH="$HOME/go"
+$ PATH="$GOPATH/bin:$PATH"
+$ hey -q 10 -c 1 -z 1m http://<name_of_your_node>/http
 ```
-(the name of the node can be obtained with 
+where the name of the node can be obtained with 
 
 ```
 $ kubectl get nodes
