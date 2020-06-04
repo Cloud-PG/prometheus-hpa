@@ -69,21 +69,6 @@ Finally, let's deploy an [horizontal pod autoscaler](https://kubernetes.io/docs/
 $ kubectl apply -f manifests/hpa.yaml
 ````
 
-Now, let's generate some load on our system:
-```
-$ go get -u github.com/rakyll/hey
-$ export GOPATH="$HOME/go"
-$ PATH="$GOPATH/bin:$PATH"
-$ hey -q 10 -c 1 -z 1m http://<name_of_your_node>/http
-```
-where the name of the node can be obtained with 
-
-```
-$ kubectl get nodes
-```
-
-This should make our metric rise above the previously-set threshold and the horizontal pod autoscaler should get in action scaling httpgo deployment. 
-
 To see if scaling is active:
 ````
 $ kubectl describe hpa
