@@ -6,10 +6,10 @@ This repository contains code to deploy an horizontal pod autoscaler on Kubernet
 ![Overview](hpa_.png)
 
 ## Requirements
-This requires a Kubernetes cluster v1.14 or higher. 
+This requires a Kubernetes cluster v1.13 or higher. 
 
 ## Quick Start
-First of all, Prometheus exporters are a number of libraries and servers which help in exporting existing metrics from third-party systems as Prometheus metrics. These can be stardard general-purpose exporters like [kube-eagle](https://github.com/cloudworkz/kube-eagle), or custom ones.
+First of all, Prometheus exporters are a number of libraries and servers which help in exporting existing metrics from third-party systems as Prometheus metrics. These could be stardard general-purpose exporters like [kube-eagle](https://github.com/cloudworkz/kube-eagle), or custom ones.
 In order to deploy a kube-eagle exporter:
 ```
 $ kubectl apply -f manifests/kube-eagle.yaml
@@ -25,7 +25,7 @@ $ kubectl apply -f manifests/ingress.yaml
 ```
     
 Now we have to deploy a Prometheus server (https://prometheus.io/docs/introduction/overview/).
-The one we will deploy will scrape kube-eagle and httpgo exporters (make sure you subsititute  in ```manifests/prometheus.yaml``` the ```kube-eagle-service-cluster-IP``` with the real value in your cluster, which could be obtained with ```$ kubectl describe service kube-eagle -n monitoring```
+The one we will deploy will scrape kube-eagle and httpgo exporters (make sure you subsititute in ```manifests/prometheus.yaml```, ```kube-eagle-service-cluster-IP``` with the real value in your cluster, which could be obtained with ```$ kubectl describe service kube-eagle -n monitoring```
 
 Then, let's deploy the Prometheus server
 ```
