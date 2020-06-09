@@ -61,7 +61,7 @@ $ kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1/ | jq
   ]
 ```
 
-Finally, let's deploy an [horizontal pod autoscaler](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) which is set to scale httpgo deployment according to the exposed metric. 
+Then, let's deploy an [horizontal pod autoscaler](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) which is set to scale httpgo deployment according to the exposed metric. 
 ```
 $ kubectl apply -f manifests/hpa.yaml
 ```
