@@ -15,19 +15,14 @@ data:
       - job_name: 'kube-eagle'
         static_configs:
             - targets: ['kube-eagle-service-cluster-IP:8080']
-      
-      - job_name: 'kubernetes-pods'
+          
+      - job_name: 'httpgo-pod'
         kubernetes_sd_configs:
         - role: pod
         relabel_configs:
         - source_labels: [__meta_kubernetes_pod_label_app]
           action: keep
-          regex: process-exporter
-        #target_label: process-exporter
-
-        #- source_labels: [__meta_kubernetes_pod_name]
-        #  action: keep
-        #  target_label: process-exporter-deployment-54fccf6f8d-f424n 
+          regex: httpgo
 
 ---
 apiVersion: extensions/v1beta1
