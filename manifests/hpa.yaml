@@ -14,11 +14,11 @@ spec:
   - type: Object
     object:
       metric:
-        name: process_exporter_test
+        name: myapphttp_test
       describedObject:
         apiVersion: batch/v1
         kind: Job
-        name: kubernetes-pods
+        name: httpgo-pod
       target:
         type: Value
-        value: 1.2
+        value: 0.5
