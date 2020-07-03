@@ -2,7 +2,7 @@
 
 This repository contains code to deploy an horizontal pod autoscaler on Kubernetes cluster that scales a Deployment according to a Custom Metric collected by Prometheus.
 
-![Overview](hpa__.png)
+![Overview](hpa_new.png)
 
 ## Exporter 
 This component retrives metrics coming from third-party's applications and make them available to Prometheus server. As an example we will see three different types of exporters associated to different kinds of applications.
