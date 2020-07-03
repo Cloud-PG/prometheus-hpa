@@ -111,4 +111,17 @@ to deploy:
   - httpd: ```number of accesses per second```
   - couchDB: ```number of reads```
  
+## Checks
+The prometheus webUI is available at ```http://<masternode-publicIP>:<PrometheusService-nodePort>```.
 
+The exposed metrics can be seen running:
+```
+$ kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1/ | jq
+
+```
+
+To see if scaling is active:
+```
+$ kubectl describe hpa
+
+```
