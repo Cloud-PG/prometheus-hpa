@@ -1,0 +1,44 @@
+# This manifest is used to deploy an httpgo deployment and to deploy its service.
+# The image ttedesch/httpgo_exporter:latest contains an httpgo server and a process exporter that looks for httpgo process)
+# In order to test the server from outside pods, it's necessary to use a NodePort service.
+
+apiVersion: v1                                                           
+kind: Service
+metadata:                                                                  
+name: httpgo                                                           
+spec:                                                                      
+  type: NodePort                                                           
+  ports:                                                                   
+  - port: 8888 # the port here is matching port used in ttedesch/httpgo_exporter:latest container                                                                        
+    protocol: TCP                                                            
+    name: http                                                               
+    nodeport: 31000                                                        
+  selector:                                                                  
+    app: httpgo                                                          
+---   
+
+apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2         
+kind: Deployment                                                         
+metadata:                                                                  
+  name: httpgo                                                           
+spec:                                                                      
+  selector:                                                                  
+    matchLabels:                                                               
+      app: httpgo                                                          
+  replicas: 1                                                              
+  template:                                                                  
+    metadata:                                                                  
+      labels:                                                                    
+        app: httpgo                                                          
+    spec:                                                                      
+     containers:                                                              
+     - name: httpgo-and-exporter                                                
+       image: ttedesch/httpgo_exporter:latest                                   
+       ports:                                                                   
+       - containerPort: 18883                                                   
+       - containerPort: 8888                                                    
+       imagePullPolicy: Always                                                                                                                         
+     resources:                                                                 
+       requests:                                                                  
+         memory: "32Mi"                                                           
+         cpu: "100m"       
