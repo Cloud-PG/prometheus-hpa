@@ -31,7 +31,7 @@ For our purposes, the only sections we will use are:
 
 - ```global```: This configuration specifies parameters that are valid in all other configuration contexts. They also serve as  defaults for other configuration sections.``
 - ```scrape_config```: This section specifies a set of targets and parameters describing how to scrape them. In the general case, one scrape configuration specifies a single job. In advanced configurations, this may change. Targets may be statically configured via the ```static_configs``` parameter or dynamically discovered using one of the supported service-discovery mechanisms:
-  - ```static_configs```:
+  - ```static_configs```: configure targets statically
   - ```kubernetes_sd_configs```: Kubernetes SD configurations allow retrieving scrape targets from Kubernetes' REST API and always staying synchronized with the cluster state. One of the following role types can be configured to discover targets:
     - ```node```: The node role discovers one target per cluster node with the address defaulting to the Kubelet's HTTP port. The target address defaults to the first existing address of the Kubernetes node object in the address type order of NodeInternalIP, NodeExternalIP, NodeLegacyHostIP, and NodeHostName.
     - ```service```: The service role discovers a target for each service port for each service. This is generally useful for blackbox monitoring of a service. The address will be set to the Kubernetes DNS name of the service and respective service port.
