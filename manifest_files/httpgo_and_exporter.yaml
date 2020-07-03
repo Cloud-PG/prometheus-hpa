@@ -1,13 +1,13 @@
 # This manifest is used to deploy an httpgo deployment and to deploy its service.
-# The image ttedesch/httpgo_exporter:latest contains an httpgo server and a process exporter that looks for httpgo process)
-# In order to test the server from outside pods, it's necessary to use a NodePort service.
+# The image ttedesch/httpgo_exporter:latest contains an httpgo server and a process exporter that looks for httpgo process
+
 
 apiVersion: v1                                                           
 kind: Service
 metadata:                                                                  
 name: httpgo                                                           
 spec:                                                                      
-  type: NodePort                                                           
+  type: NodePort # In order to test the server from outside pods, it's necessary to use a NodePort service.                                                  
   ports:                                                                   
   - port: 8888 # the port here is matching port used in ttedesch/httpgo_exporter:latest container                                                                        
     protocol: TCP                                                            
