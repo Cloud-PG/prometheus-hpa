@@ -68,13 +68,13 @@ It takes ```--config=<yaml-file>``` (```-c```) as an argument: this configures h
 The adapter determines which metrics to expose, and how to expose them, through a set of "discovery" rules which are made of four parts:
 - ```Discovery```, which specifies how the adapter should find all Prometheus metrics for this rule. You can use two fields: 
   - ```seriesQuery```: specifies Prometheus series query (as passed to the /api/v1/series endpoint in Prometheus) to use to find some set of Prometheus series 
-  - ```seriesFilters```:
+  - ```seriesFilters```: to do additional filtering on metric names
 - ```Association```, which specifies how the adapter should determine which Kubernetes resources a particular metric is associated with. You can use the ```resources``` field.
 There are two ways to associate resources with a particular metric, using two different sub-fields:
   - ```template```: specify that any label name that matches some particular pattern refers to some group-resource based on the label name. The pattern is specified as a Go template, with the ```Group``` and ```Resource``` fields representing group and resource. 
   - ```overrides```: specify that some particular label represents some particular Kubernetes resource. Each override maps a Prometheus label to a Kubernetes group-resource. 
 - ```Naming```, which specifies how the adapter should expose the metric in the custom metrics API. You can use the ```name``` field, specifying a pattern to extract an API name from a Prometheus name, and potentially a transformation on that extracted value:
-  - ```matches```: a regular expression that specifies pattern. If not specified, it defaults to ```.*```. 
+  - ```matches```: a regular expression (https://docs.python.org/3/library/re.html) that specifies pattern. If not specified, it defaults to ```.*```. 
   - ```as```: specifies the transformation. You can use any capture groups defined in the ```matches``` field. If the matches field doesn't contain capture groups, the ```as``` field defaults to ```$0```. If it contains a single capture group, the ```as``` field defaults to ```$1```. Otherwise, it's an error not to specify the ```as``` field.
 - ```Querying```, which specifies how a request for a particular metric on one or more Kubernetes objects should be turned into a query to Prometheus. You can use the ```metricsQuery``` field, specifying a Go template that gets turned into a Prometheus query, using input from a particular call to the custom metrics API. A given call to the custom metrics API is distilled down to a metric name, a group-resource, and one or more objects of that group-resource. These get turned into the following fields in the template:
   - ```Series```: the metric name
@@ -92,3 +92,23 @@ There are two ways to associate resources with a particular metric, using two di
       as: "${1}_test"
     metricsQuery: <<.Series>>
 ```
+
+# Quick Start
+This repository requires a Kubernetes 1.13 installation.
+Just type
+```
+./deploy.sh
+```
+to deploy:
+- three different apps:
+  - a pod with httpgo server and a process exporter
+  - a pod with httpd server and an apache exporter
+  - a pod with CouchDB and a couchDB exporter
+- a Prometheus server
+- a Prometheus adapter pod
+- three different horizontal pod autoscalers to scale each app (up to 10 replicas) accorinding to a specific metric:
+  - httpgo: ```number of open file descriptors```
+  - httpd: ```number of accesses per second```
+  - couchDB: ```number of reads```
+ 
+
