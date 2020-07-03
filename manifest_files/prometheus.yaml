@@ -1,3 +1,7 @@
+# Thi manifest is used to get a Prometheus server deployment.
+# Its configuration is defined through a ConfigMap.
+# This manifest defines: ClusterRole, ClusterRoleBinding, Service and Deployment.
+
 apiVersion: v1
 kind: ConfigMap
 metadata:
