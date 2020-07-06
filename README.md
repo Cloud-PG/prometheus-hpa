@@ -112,7 +112,11 @@ to deploy:
   - couchDB: ```number of reads```
  
 ## Checks
-The prometheus webUI is available at ```http://<masternode-publicIP>:<PrometheusService-nodePort>```.
+The prometheus webUI is available at ```http://<masternode-publicIP>:<PrometheusService-nodePort>```:
+
+![webUI](prometheus_WebUI.png)
+
+
 
 The exposed metrics can be seen running:
 ```
