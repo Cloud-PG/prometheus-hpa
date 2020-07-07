@@ -99,9 +99,9 @@ https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale-walkth
 
 By making use of the autoscaling/v2beta2 API version you can introduce metrics to use when autoscaling a deployment. The Horizontal Pod Autoscaler is implemented as a control loop that periodically queries a metrics API. There are three types of metrics:
 
-- ```Resource metrics```: based on CPU or memory usage of a pod, exposed through ```metrics.k8s.io``` API
+- ```Resource metrics```: based on CPU or memory usage of a pod, exposed through ```metrics.k8s.io``` API (```Resource type```)
 
-- ```Custom metrics```: based on any metric reported by a Kubernetes object in a cluster, exposed through ```custom.metrics.k8s.io``` API (```Resource type```)
+- ```Custom metrics```: based on any metric reported by a Kubernetes object in a cluster, exposed through ```custom.metrics.k8s.io``` API 
   - ```Pod type```: describe pods, and are averaged together across pods and compared with a target value to determine the replica count. 
   - ```Object type```: describe a different object in the same namespace, instead of describing pods. The metrics are not necessarily fetched from the object; they only describe it.
   
