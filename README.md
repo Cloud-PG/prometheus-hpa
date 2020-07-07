@@ -101,9 +101,11 @@ By making use of the autoscaling/v2beta2 API version you can introduce metrics t
 
 - ```Resource metrics```: based on CPU or memory usage of a pod, exposed through ```metrics.k8s.io``` API
 
-- ```Custom metrics```: based on any metric reported by a Kubernetes object in a cluster, exposed through ```custom.metrics.k8s.io``` API
-
-- ```External metrics```: based on a metric from an application or service external to your cluster, exposed through ```external.metrics.k8s.io``` API
+- ```Custom metrics```: based on any metric reported by a Kubernetes object in a cluster, exposed through ```custom.metrics.k8s.io``` API (```Resource type```)
+  - ```Pod type```: describe pods, and are averaged together across pods and compared with a target value to determine the replica count. 
+  - ```Object type```: describe a different object in the same namespace, instead of describing pods. The metrics are not necessarily fetched from the object; they only describe it.
+  
+- ```External metrics```: based on a metric from an application or service external to your cluster, exposed through ```external.metrics.k8s.io``` API (```External type```).
 
 ### Example
 ```
