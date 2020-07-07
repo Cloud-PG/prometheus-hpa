@@ -45,12 +45,13 @@ For our purposes, the only sections we will use are:
       scrape_interval: 10s
       evaluation_interval: 10s
     scrape_configs:                                                 
+      
       - job_name: 'kube-eagle'                                      # Scrape an exporter statically using its service IP address and port, name this scraping job as 'kube-eagle'
         static_configs:                                             
             - targets: ['kube-eagle-service-cluster-IP:8080']
           
-      - job_name: 'httpgo-pod'                                    
-        kubernetes_sd_configs:                                      # Scrape an exporter dynamically, looking for a pod with label app 'httpgo', name this scraping job as 'httpgo-pod'      
+      - job_name: 'httpgo-pod'                                      # Scrape an exporter dynamically, looking for a pod with label app 'httpgo', name this scraping job as 'httpgo-pod'                                    
+        kubernetes_sd_configs:                                           
         - role: pod
         relabel_configs:
         - source_labels: [__meta_kubernetes_pod_label_app]
