@@ -169,3 +169,5 @@ To see if scaling is active:
 ```
 $ kubectl describe hpa
 ```
+
+## To expose additional metrics
