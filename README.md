@@ -93,6 +93,46 @@ There are two ways to associate resources with a particular metric, using two di
     metricsQuery: <<.Series>>
 ```
 
+## Horizontal Pod Autoscaler
+https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale-walkthrough/#autoscaling-on-multiple-metrics-and-custom-metrics
+
+By making use of the autoscaling/v2beta2 API version you can introduce metrics to use when autoscaling a deployment. The Horizontal Pod Autoscaler is implemented as a control loop that periodically queries a metrics API. There are three types of metrics:
+
+- ```Resource metrics```: based on CPU or memory usage of a pod, exposed through ```metrics.k8s.io``` API
+
+- ```Custom metrics```: based on any metric reported by a Kubernetes object in a cluster, exposed through ```custom.metrics.k8s.io``` API
+
+- ```External metrics```: based on a metric from an application or service external to your cluster, exposed through ```external.metrics.k8s.io``` API
+
+### Example
+```
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: httpgo-hpa
+  namespace: default
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: httpgo
+  minReplicas: 1
+  maxReplicas: 10
+  metrics:
+
+  - type: Object
+    object:
+      metric:
+        name: myapphttp_process_open_fds
+      describedObject:
+        apiVersion: batch/v1
+        kind: Job
+        name: httpgo-pod
+      target:
+        type: Value
+        value: 0.5
+ ```
+ 
 # Quick Start
 This repository requires a Kubernetes 1.13 installation.
 Just type
@@ -121,11 +161,9 @@ The prometheus webUI is available at ```http://<masternode-publicIP>:<Prometheus
 The exposed metrics can be seen running:
 ```
 $ kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1/ | jq
-
 ```
 
 To see if scaling is active:
 ```
 $ kubectl describe hpa
-
 ```
