@@ -29,7 +29,7 @@ This is the Prometheus server itself, which collects all metrics from various ex
 A generic Prometheus configurations has to be written in YAML format.
 For our purposes, the only sections we will use are:
 
-- ```global```: This configuration specifies parameters that are valid in all other configuration contexts. They also serve as  defaults for other configuration sections.``
+- ```global```: This configuration specifies parameters that are valid in all other configuration contexts. They also serve as  defaults for other configuration sections.
 - ```scrape_config```: This section specifies a set of targets and parameters describing how to scrape them. In the general case, one scrape configuration specifies a single job. In advanced configurations, this may change. Targets may be statically configured via the ```static_configs``` parameter or dynamically discovered using one of the supported service-discovery mechanisms:
   - ```static_configs```: configure targets statically
   - ```kubernetes_sd_configs```: Kubernetes SD configurations allow retrieving scrape targets from Kubernetes' REST API and always staying synchronized with the cluster state. One of the following role types can be configured to discover targets:
@@ -41,16 +41,16 @@ For our purposes, the only sections we will use are:
 
 ### Example
 ```
-    global:
+    global:                                                         # How frequently to scrape targets and evaluate rules by default
       scrape_interval: 10s
       evaluation_interval: 10s
-    scrape_configs:      
-      - job_name: 'kube-eagle'
-        static_configs:
+    scrape_configs:                                                 
+      - job_name: 'kube-eagle'                                      # Scrape an exporter statically using its service IP address and port, name this scraping job as 'kube-eagle'
+        static_configs:                                             
             - targets: ['kube-eagle-service-cluster-IP:8080']
           
-      - job_name: 'httpgo-pod'
-        kubernetes_sd_configs:
+      - job_name: 'httpgo-pod'                                    
+        kubernetes_sd_configs:                                      # Scrape an exporter dynamically, looking for a pod with label app 'httpgo', name this scraping job as 'httpgo-pod'      
         - role: pod
         relabel_configs:
         - source_labels: [__meta_kubernetes_pod_label_app]
@@ -84,13 +84,13 @@ There are two ways to associate resources with a particular metric, using two di
 ### Example
 ```
   rules:
-  - seriesQuery: 'process_exporter_load1{instance="10.100.1.135:18000",job="kubernetes-pods"}'  
+  - seriesQuery: 'testmetric_total{instance="10.100.1.135:18000",job="kubernetes-pods"}'          # DISCOVERY of process_exporter_load1 time series with certain instance and job labels
     resources:
-      template: "<<.Resource>>"
+      template: "<<.Resource>>"                                                                   # ASSOCIATION of that metric to the resource which is present in the labels (job.batch)
     name:
-      matches: "^(.*)_load1"
-      as: "${1}_test"
-    metricsQuery: <<.Series>>
+      matches: "^(.*)_total"                                                                      # NAMING of the metric: modify the last part of the name, from testmetric_total to test_metric_per_second
+      as: "${1}_per_second"
+    metricsQuery: 'sum(rate(<<.Series>>{<<.LabelMatchers>>}[2m])) by (<<.GroupBy>>)'              # QUERYING of the metric, calculating a rate value averaged every 2 minutes and summing up                                                                    
 ```
 
 ## Horizontal Pod Autoscaler
@@ -106,29 +106,28 @@ By making use of the autoscaling/v2beta2 API version you can introduce metrics t
 
 ### Example
 ```
-apiVersion: autoscaling/v2beta2
+apiVersion: autoscaling/v2beta2     
 kind: HorizontalPodAutoscaler
-metadata:
-  name: httpgo-hpa
+    metadata:                               # metadata of the autoscaler
+  name: httpgo-hpa 
   namespace: default
 spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
+  scaleTargetRef:                           # spec of the Kubernetes resource to be scaled (in this case a Deployment)
+    apiVersion: apps/v1   
     kind: Deployment
     name: httpgo
-  minReplicas: 1
+  minReplicas: 1                            # max and min number of replicas of that resource
   maxReplicas: 10
-  metrics:
-
+  metrics:                                  # spec of the metric used for scaling (in this case a Job Object)
   - type: Object
-    object:
+    object:                               
       metric:
         name: myapphttp_process_open_fds
       describedObject:
         apiVersion: batch/v1
         kind: Job
         name: httpgo-pod
-      target:
+      target:                               # threshold value
         type: Value
         value: 0.5
  ```
@@ -137,7 +136,7 @@ spec:
 This repository requires a Kubernetes 1.13 installation.
 Just type
 ```
-./deploy.sh
+sh deploy.sh
 ```
 to deploy:
 - three different apps:
