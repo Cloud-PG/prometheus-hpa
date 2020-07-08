@@ -26,7 +26,7 @@ https://prometheus.io/docs/prometheus/latest/configuration/configuration/
 
 This is the Prometheus server itself, which collects all metrics from various exporters in the form of time series. Those can be accessed and visualized through a WebUI.
 
-A generic Prometheus configurations has to be written in YAML format.
+A generic Prometheus configuration has to be written in YAML format.
 For our purposes, the only sections we will use are:
 
 - ```global```: This configuration specifies parameters that are valid in all other configuration contexts. They also serve as  defaults for other configuration sections.
@@ -143,16 +143,18 @@ sh deploy.sh
 ```
 to deploy:
 - three different apps:
-  - a pod with httpgo server and a process exporter
-  - a pod with httpd server and an apache exporter
-  - a pod with CouchDB and a couchDB exporter
+  - a pod with httpgo server and a process exporter - exposed through NodePort service
+  - a pod with httpd server and an apache exporter - exposed through NodePort service
+  - a pod with CouchDB and a couchDB exporter - exposed through NodePort service
 - a Prometheus server
 - a Prometheus adapter pod
 - three different horizontal pod autoscalers to scale each app (up to 10 replicas) accorinding to a specific metric:
   - httpgo: ```number of open file descriptors```
   - httpd: ```number of accesses per second```
   - couchDB: ```number of reads```
- 
+
+*Here NodePort services are used in order to make apps reachable from outside the cluster.*
+
 ## Checks
 The prometheus webUI is available at ```http://<masternode-publicIP>:<PrometheusService-nodePort>```:
 
