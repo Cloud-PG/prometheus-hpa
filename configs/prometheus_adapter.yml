@@ -1,0 +1,24 @@
+rules:
+  - seriesQuery: 'myapphttp_process_open_fds'  
+    resources:
+      template: "<<.Resource>>"
+    name:
+      matches: "^(.*)"
+      as: "${1}"
+    metricsQuery: 'avg(<<.Series>>) by (job)'
+    
+  - seriesQuery: 'apache_accesses_total'  
+    resources:
+      template: "<<.Resource>>"
+    name:
+      matches: "^(.*)_total"
+      as: "${1}_per_second"
+    metricsQuery: 'avg(rate(<<.Series>>[5m])) by (job)'
+    
+  - seriesQuery: 'couchdb_httpd_database_reads'  
+    resources:
+      template: "<<.Resource>>"
+    name:
+      matches: "^(.*)"
+      as: "${1}_per_second"
+    metricsQuery: 'avg(<<.Series>>) by (job)'
