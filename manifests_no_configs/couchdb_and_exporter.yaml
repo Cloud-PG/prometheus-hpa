@@ -1,0 +1,60 @@
+# This manifest is used to get a Deployment of two containers: one running a couchDB, the other running a couchDB exporter which scrapes metrics from the former.
+# Both containers are exposed through a NodePort service.
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: db-frontend-svc
+spec:
+  type: NodePort
+  ports:
+  - name: http
+    port: 5984
+    protocol: TCP
+    targetPort: 5984
+  selector:
+    app: db-frontend
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: db-frontend-exporter-svc
+spec:
+  type: NodePort
+  ports:
+  - name: exporter
+    port: 9984
+    protocol: TCP
+    targetPort: 9984
+  selector:
+    app: db-frontend
+---
+
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: db-frontend
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: db-frontend
+    spec:
+      containers:
+      - name: couchdb
+        image: couchdb
+        ports:
+        - containerPort: 5984
+        args: ["--name=my-couchdb", "--volume=~/data:/opt/couchdb/data"]
+        env:
+        - name: COUCHDB_USER
+          value: "admin"
+        - name: COUCHDB_PASSWORD
+          value: "password"
+      - name: couchdb-exporter
+        image: gesellix/couchdb-prometheus-exporter
+        ports:
+        - containerPort: 9984
+        args: ["--couchdb.uri=http://127.0.0.1:5984", "--couchdb.username=admin",  "--couchdb.password=password"]
