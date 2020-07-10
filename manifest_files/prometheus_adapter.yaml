@@ -27,7 +27,7 @@ data:
       name:
         matches: "^(.*)"
         as: "${1}"
-      metricsQuery: <<.Series>>
+      metricsQuery: 'avg(<<.Series>>) by (job)'
       
     - seriesQuery: 'apache_accesses_total'  
       resources:
@@ -35,7 +35,7 @@ data:
       name:
         matches: "^(.*)_total"
         as: "${1}_per_second"
-      metricsQuery: 'sum(<<.Series>>{<<.LabelMatchers>>}) by (<<.GroupBy>>)'
+      metricsQuery: 'avg(rate(<<.Series>>[5m])) by (job)'
       #metricsQuery: <<.Series>>
 
       
@@ -45,7 +45,7 @@ data:
       name:
         matches: "^(.*)"
         as: "${1}_per_second"
-      metricsQuery: <<.Series>>
+      metricsQuery: 'avg(<<.Series>>) by (job)'
 ---
 
 apiVersion: rbac.authorization.k8s.io/v1
