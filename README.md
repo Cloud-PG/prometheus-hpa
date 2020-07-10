@@ -21,7 +21,7 @@ to deploy:
   - a pod with CouchDB and a couchDB exporter - exposed through NodePort service
 - a Prometheus server
 - a Prometheus adapter pod
-- three different horizontal pod autoscalers to scale each app (up to 10 replicas) accorinding to a specific metric:
+- three different horizontal pod autoscalers to scale each app (up to 10 replicas) accornding to a specific metric:
   - httpgo: ```number of open file descriptors```
   - httpd: ```number of accesses per second```
   - couchDB: ```number of reads```
@@ -30,9 +30,51 @@ to deploy:
 
 <a name="quickstart"></a>
 ### Step-by-step configuration
+First of all we need to deploy the three apps:
+- ```httpgo server```: in this case, our deployment will use ```ttedesch/httpgo_exporter:latest``` image, which is built inserting process_exporter process inside ```veknet/httpgo``` image. Dockerfile, entrypoint and scripts used can be found [here](httpgo_exporter). The deployment file is [this](manifests_no_configs/httpgo_and_exporter.yaml). A Nodeport service exposes port 31000 in order to make the httpgo reachable from outside.
+  ```
+  kubectl apply -f manifests_no_configs/httpgo_and_exporter.yaml
+  ```
+
+- ```httpd server```: in this case, our deployment will use ```ttedesch/httpd:latest``` and ```bitnami/apache-exporter``` images. The first one is built using ```apt-get install apache2``` and setting mod_status, Dockerfile and config file used can be found [here](apache_server). The deployment file is [this](manifests_no_configs/httpd_and_exporter.yaml). A Nodeport service is used to make the httpd server reachable from outside.
+  ```
+  kubectl apply -f manifests_no_configs/httpd_and_exporter.yaml
+  ```
+
+- ```couchDB```: in this case, our deployment will use ```couchdb:latest``` and ``` gesellix/couchdb-prometheus-exporter``` images. The deployment file is [this](manifests_no_configs/couchdb_and_exporter.yaml). A Nodeport service is used to make the couchDB server reachable from outside.
+  ```
+  kubectl apply -f manifests_no_configs/couchdb_and_exporter.yaml
+  ```
+  
+Then, let's deploy the Prometheus Server. First of all we need to create the ConfigMap contaning its configuration. In the Prometheus Server section you can see how to write a proper [configuration file](configs/prometheus.yml).
+```
+kubectl create configmap prometheus-example-cm --from-file configs/prometheus.yml
+```
+Then, let's deploy Prometheus server itself, mounting that ConfigMap as volume ([manifest](manifests_no_configs/prometheus.yaml)
+```
+kubectl apply -f manifests_no_configs/prometheus.yaml
+```
+Analogously, we need to [configure](configs/prometheus_adapter.yml) and [deploy](manifests_no_configs/prometheus_adapter.yaml) the prometheus adapter deployment which will query prometheus and expose metrics through Custom Metrics API.
+```
+kubectl create configmap prometheus-example-cm --from-file configs/prometheus_adapter.yml
+kubectl apply -f manifests_no_configs/prometheus_adapter.yaml
+```
+
+In the end, let's deploy the three Horizontal Pod Autoscalers ([httpgo](manifests_no_configs/hpa_hpptgo.yaml), [httpd](manifests_no_configs/hpa_httpd.yaml), [couchdb](manifests_no_configs/hpa_couchdb.yaml)) which will scale those three apps according to specific metrics:
+- httpgo: ```number of open file descriptors```
+- httpd: ```number of accesses per second```
+- couchDB: ```number of reads```
+
+```
+kubectl apply -f manifests_no_configs/hpa_hpptgo.yaml
+kubectl apply -f manifests_no_configs/hpa_httpd.yaml
+kubectl apply -f manifests_no_configs/hpa_couchdb.yaml
+```
+
+
 
 <a name="quickstart"></a>
-### How to debug
+### How to test and debug
 The prometheus webUI is available at ```http://<masternode-publicIP>:<PrometheusService-nodePort>```:
 
 ![webUI](prometheus_WebUI.png)
