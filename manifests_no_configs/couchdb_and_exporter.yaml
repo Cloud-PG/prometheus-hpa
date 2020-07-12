@@ -1,7 +1,7 @@
 # This manifest is used to get a Deployment of two containers: one running a couchDB, the other running a couchDB exporter which scrapes metrics from the former.
 # Both containers are exposed through a NodePort service.
 
-# create NodePort service for couchDB deployment
+# create NodePort service for couchDB 
 apiVersion: v1
 kind: Service
 metadata:
@@ -17,7 +17,7 @@ spec:
     app: db-frontend
 ---
 
-# create NodePort service for couchDB exporter deployment
+# create NodePort service for couchDB exporter 
 apiVersion: v1
 kind: Service
 metadata:
