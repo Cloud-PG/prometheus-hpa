@@ -2,6 +2,7 @@
 # Its configuration is provided through a ConfigMap.
 # This manifest defines: ServiceAccount, ClusterRole, ClusterRoleBinding, RoleBinding, Service, Deployment and APIService
 
+# create ServiceAccount
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -11,6 +12,7 @@ metadata:
   name: prometheus-adapter
 ---
 
+# create ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -24,7 +26,7 @@ rules:
   resources: ["*"]
   verbs: ["*"]
 ---
-
+# create ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -45,7 +47,7 @@ rules:
   - list
   - watch
 ---
-
+# create ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -63,6 +65,7 @@ subjects:
   namespace: "default"
 ---
 
+# create ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -80,6 +83,7 @@ subjects:
   namespace: "default"
 ---
 
+#create ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -97,6 +101,7 @@ subjects:
   namespace: "default"
 ---
 
+# create RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
@@ -114,6 +119,7 @@ subjects:
   namespace: "default"
 ---
 
+# create Service
 apiVersion: v1
 kind: Service
 metadata:
@@ -136,6 +142,7 @@ spec:
 
 ---
 
+# create Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -186,6 +193,7 @@ spec:
         emptyDir: {}
 ---
 
+# create ApiService
 apiVersion: apiregistration.k8s.io/v1beta1
 kind: APIService
 metadata:
