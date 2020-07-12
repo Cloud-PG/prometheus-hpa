@@ -1,3 +1,5 @@
+# this manifest is used to deploy an hpa which scales httpgo deployment according to myapphttp_process_open_fds metric
+
 apiVersion: autoscaling/v2beta2
 kind: HorizontalPodAutoscaler
 metadata:
@@ -23,14 +25,3 @@ spec:
       target:
         type: Value
         value: 0.5
-  #- type: Object
-  #  object:
-  #    metric:
-  #      name: process_exporter_test
-  #    describedObject:
-  #      apiVersion: batch/v1
-  #      kind: Job
-  #      name: kubernetes-pods
-  #    target:
-  #      type: Value
-  #      value: 2
