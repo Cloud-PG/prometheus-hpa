@@ -1,3 +1,5 @@
+# this manifest is used to deploy an horizontal pod autoscaler which scales httpd deployment according to apache_accesses_per_second metric
+
 apiVersion: autoscaling/v2beta2
 kind: HorizontalPodAutoscaler
 metadata:
@@ -19,18 +21,7 @@ spec:
       describedObject:
         apiVersion: batch/v1
         kind: Job
-        name: apache_and_exporter-pod  #name: httpd_and_exporter-pod
+        name: apache_and_exporter-pod
       target:
         type: Value
         value: 0.5
-  #- type: Object
-  #  object:
-  #    metric:
-  #      name: process_exporter_test
-  #    describedObject:
-  #      apiVersion: batch/v1
-  #      kind: Job
-  #      name: kubernetes-pods
-  #    target:
-  #      type: Value
-  #      value: 2
