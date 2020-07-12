@@ -1,6 +1,7 @@
 # This manifest is used to run a Deployment made of two containers: one running an httpd server and the other one running an apache exporter getting metrics from the former.
 # Both containers are exposed through NodePort service.
 
+# create Service for httpd server
 apiVersion: v1
 kind: Service
 metadata:
@@ -16,6 +17,7 @@ spec:
     app: frontend
 ---
 
+# create service for apache exporter 
 apiVersion: v1
 kind: Service
 metadata:
@@ -31,6 +33,7 @@ spec:
     app: frontend
 ---
 
+# create httpd + apache exporter deployment
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
