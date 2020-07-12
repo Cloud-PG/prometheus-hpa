@@ -17,7 +17,7 @@ spec:
   selector:
     app: httpgo
 ---
-# create deployment
+# create httpgo (with exporter) deployment
 apiVersion: apps/v1 
 kind: Deployment
 metadata:
