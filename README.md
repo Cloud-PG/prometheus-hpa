@@ -758,38 +758,63 @@ For example, in our case, the output should be:
   ]
 }
 ```
+Now let's see an example to see if autoscaling is active. We will use httpgo pod as an example.
+In order to test the autoscaler, let's create an Ingress, which will balance incoming requests across all httpgo pods:
+```
+  
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: ingress
+  namespace: default
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  rules:
+  - host: "<name-of-your-node>.cern.ch"     # substitute <name-of-your-node> with the name of your worker node (you can use kubectl get node to obtain it)
+    http:
+      paths:
+      - path: /http
+        backend:
+          serviceName: httpgo     # match httpgo service
+          servicePort: 8888
+```
 
-To see if scaling is active:
+Now let's generate load artificially on httpgo server using hey tool (https://github.com/vkuznet/hey)
+```
+go get -u github.com/rakyll/hey
+PATH="$GOPATH/bin:$PATH"
+export GOPATH="$HOME/go"
+hey -q 10 -c 1000 -z 1m http://test-cluster-lciavsdzsham-node-0.cern.ch/http
+```
+This should increase the value of our metric (the average number of open fds of httpgo-pods) and trigger the autoscaler. To see it in action:
 ```
 $ kubectl describe hpa
 ```
-For example, in our case, if the number of open fds of httpgo-pods increase, the output of the hpa for httpgo server should be:
+The output of the hpa for httpgo server should be something like this:
 ```
 Name:                                                             httpgo-hpa
 Namespace:                                                        default
 Labels:                                                           <none>
-Annotations:                                                      kubectl.kubernetes.io/last-applied-configuration:
-                                                                    {"apiVersion":"autoscaling/v2beta2","kind":"HorizontalPodAutoscaler","metadata":{"annotations":{},"n
-ame":"httpgo-hpa","namespace":"default...
-CreationTimestamp:                                                Wed, 15 Jul 2020 13:15:25 +0200
+Annotations:                                                      CreationTimestamp:  Wed, 15 Jul 2020 19:10:32 +0200
 Reference:                                                        Deployment/httpgo
 Metrics:                                                          ( current / target )
-  "myapphttp_process_open_fds" on Job/httpgo-pod (target value):  6 / 500m
+  "myapphttp_process_open_fds" on Job/httpgo-pod (target value):  269400m / 200
 Min replicas:                                                     1
 Max replicas:                                                     10
-Deployment pods:                                                  10 current / 10 desired
+Deployment pods:                                                  6 current / 9 desired
 Conditions:
-  Type            Status  Reason            Message
-  ----            ------  ------            -------
-  AbleToScale     True    ReadyForNewScale  recommended size matches current size
-  ScalingActive   True    ValidMetricFound  the HPA was able to successfully calculate a replica count from Job metric myapphttp_process_open_fds
-  ScalingLimited  True    TooManyReplicas   the desired replica count is more than the maximum replica count
+  Type            Status  Reason              Message
+  ----            ------  ------              -------
+  AbleToScale     True    SucceededRescale    the HPA controller was able to update the target scale to 9
+  ScalingActive   True    ValidMetricFound    the HPA was able to successfully calculate a replica count from Job metric myapphttp_process_open_fds
+  ScalingLimited  False   DesiredWithinRange  the desired count is within the acceptable range
 Events:
-  Type     Reason                        Age                    From                       Message
-  ----     ------                        ----                   ----                       -------
-  Normal   SuccessfulRescale             5m31s                  horizontal-pod-autoscaler  New size: 4; reason: Job metric myapphttp_process_open_fds above target      
-  Normal   SuccessfulRescale             5m16s                  horizontal-pod-autoscaler  New size: 8; reason: Job metric myapphttp_process_open_fds above target      
-  Normal   SuccessfulRescale             5m                     horizontal-pod-autoscaler  New size: 10; reason: Job metric myapphttp_process_open_fds above target     
+  Type    Reason             Age   From                       Message
+  ----    ------             ----  ----                       -------
+  Normal  SuccessfulRescale  39s   horizontal-pod-autoscaler  New size: 4; reason: Job metric myapphttp_process_open_fds above target
+  Normal  SuccessfulRescale  24s   horizontal-pod-autoscaler  New size: 6; reason: Job metric myapphttp_process_open_fds above target
+  Normal  SuccessfulRescale  9s    horizontal-pod-autoscaler  New size: 9; reason: Job metric myapphttp_process_open_fds above target
 ```
 
 <a name="quickstart"></a>
@@ -950,7 +975,7 @@ spec:
         name: httpgo-pod
       target:                               # threshold value
         type: Value
-        value: 0.5
+        value: 200
  ```
  
 
