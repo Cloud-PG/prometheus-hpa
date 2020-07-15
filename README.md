@@ -16,46 +16,671 @@ The three apps we will use are:
 
 ### Step-by-step configuration
 First of all we need to deploy the three apps:
-- ```httpgo server```: in this case, our deployment will use ```ttedesch/httpgo_exporter:latest``` image, which is built inserting process_exporter process inside ```veknet/httpgo``` image. Dockerfile, entrypoint and scripts used can be found [here](httpgo_exporter). The deployment file is [this](manifests_no_configs/httpgo_and_exporter.yaml). A Nodeport service exposes port 31000 in order to make the httpgo reachable from outside.
+- ```httpgo server```: in this case, our deployment will use ```ttedesch/httpgo_exporter:latest``` image, which is built inserting process_exporter process inside ```veknet/httpgo``` image. Dockerfile, entrypoint and scripts used can be found [here](httpgo_exporter). A Nodeport service exposes port 31000 in order to make the httpgo reachable from outside.
+  ```
+  # This manifest is used to deploy an httpgo deployment and to deploy its service.
+  # The image ttedesch/httpgo_exporter:latest contains an httpgo server and a process exporter that looks for httpgo process
+
+  # create service
+  apiVersion: v1
+  kind: Service
+  metadata:
+    name: httpgo
+  spec:
+    type: NodePort 
+    ports:
+    - port: 8888 
+      protocol: TCP
+      name: http
+      nodeport: 31000
+    selector:
+      app: httpgo
+  ---
+  # create httpgo (with exporter) deployment
+  apiVersion: apps/v1 
+  kind: Deployment
+  metadata:
+    name: httpgo
+  spec:
+    selector:
+      matchLabels:
+        app: httpgo
+    replicas: 1
+    template:
+      metadata:
+        labels:
+          app: httpgo
+      spec:
+        containers:
+        - name: httpgo-and-exporter
+          image: ttedesch/httpgo_exporter:latest
+          ports:
+          - containerPort: 18883
+          - containerPort: 8888
+          imagePullPolicy: Always
+
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "100m"
+  ```
   ```
   kubectl apply -f manifests_no_configs/httpgo_and_exporter.yaml
   ```
 
-- ```httpd server```: in this case, our deployment will use ```ttedesch/httpd:latest``` and ```bitnami/apache-exporter``` images. The first one is built using ```apt-get install apache2``` and setting mod_status, Dockerfile and config file used can be found [here](apache_server). The deployment file is [this](manifests_no_configs/httpd_and_exporter.yaml). A Nodeport service is used to make the httpd server reachable from outside.
+- ```httpd server```: in this case, our deployment will use ```ttedesch/httpd:latest``` and ```bitnami/apache-exporter``` images. The first one is built using ```apt-get install apache2``` and setting mod_status, Dockerfile and config file used can be found [here](apache_server). A Nodeport service is used to make the httpd server reachable from outside.
+  ```
+  # This manifest is used to run a Deployment made of two containers: one running an httpd server and the other one running an apache exporter getting metrics from the       former.
+  # Both containers are exposed through NodePort service.
+
+  # create Service for httpd server
+  apiVersion: v1
+  kind: Service
+  metadata:
+    name: frontend-svc
+  spec:
+    type: NodePort
+    ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: 80
+    selector:
+      app: frontend
+  ---
+
+  # create service for apache exporter 
+  apiVersion: v1
+  kind: Service
+  metadata:
+    name: frontend-exporter-svc
+  spec:
+    type: NodePort
+    ports:
+    - name: exporter
+      port: 9117
+      protocol: TCP
+      targetPort: 9117
+    selector:
+      app: frontend
+  ---
+
+  # create httpd + apache exporter deployment
+  apiVersion: extensions/v1beta1
+  kind: Deployment
+  metadata:
+    name: frontend
+  spec:
+    replicas: 1
+    template:
+      metadata:
+        labels:
+          app: frontend
+      spec:
+        containers:
+        - name: apache2
+          #image: httpd:latest
+          image: ttedesch/httpd:latest
+          #image: ttedesch/httpd:extended_status
+          ports:
+          - containerPort: 80
+        - name: apache-exporter
+          #image: lusotycoon/apache-exporter
+          image: bitnami/apache-exporter
+          ports:
+          - containerPort: 9117
+          args: ["--scrape_uri=http://127.0.0.1/server-status/?auto"]
+  ```
+  
   ```
   kubectl apply -f manifests_no_configs/httpd_and_exporter.yaml
   ```
 
-- ```couchDB```: in this case, our deployment will use ```couchdb:latest``` and ``` gesellix/couchdb-prometheus-exporter``` images. The deployment file is [this](manifests_no_configs/couchdb_and_exporter.yaml). A Nodeport service is used to make the couchDB server reachable from outside.
+- ```couchDB```: in this case, our deployment will use ```couchdb:latest``` and ``` gesellix/couchdb-prometheus-exporter``` images. A Nodeport service is used to make the couchDB server reachable from outside.
+  ```
+  # This manifest is used to get a Deployment of two containers: one running a couchDB, the other running a couchDB exporter which scrapes metrics from the former.
+  # Both containers are exposed through a NodePort service.
+
+  # create NodePort service for couchDB 
+  apiVersion: v1
+  kind: Service
+  metadata:
+    name: db-frontend-svc
+  spec:
+    type: NodePort
+    ports:
+    - name: http
+      port: 5984
+      protocol: TCP
+      targetPort: 5984
+    selector:
+      app: db-frontend
+  ---
+
+  # create NodePort service for couchDB exporter 
+  apiVersion: v1
+  kind: Service
+  metadata:
+    name: db-frontend-exporter-svc
+  spec:
+    type: NodePort
+    ports:
+    - name: exporter
+      port: 9984
+      protocol: TCP
+      targetPort: 9984
+    selector:
+      app: db-frontend
+  ---
+
+  # create couchDB + couchDB exporter deployment 
+  apiVersion: extensions/v1beta1
+  kind: Deployment
+  metadata:
+    name: db-frontend
+  spec:
+    replicas: 1
+    template:
+      metadata:
+        labels:
+          app: db-frontend
+      spec:
+        containers:
+        - name: couchdb
+          image: couchdb
+          ports:
+          - containerPort: 5984
+          args: ["--name=my-couchdb", "--volume=~/data:/opt/couchdb/data"]
+          env:
+          - name: COUCHDB_USER
+            value: "admin"
+          - name: COUCHDB_PASSWORD
+            value: "password"
+        - name: couchdb-exporter
+          image: gesellix/couchdb-prometheus-exporter
+          ports:
+          - containerPort: 9984
+          args: ["--couchdb.uri=http://127.0.0.1:5984", "--couchdb.username=admin",  "--couchdb.password=password"]
+  ```
   ```
   kubectl apply -f manifests_no_configs/couchdb_and_exporter.yaml
   ```
   
-Then, let's deploy the Prometheus Server. First of all we need to create the ConfigMap contaning its configuration. In the Prometheus Server section you can see how to write a proper [configuration file](configs/prometheus.yml).
+Then, let's deploy the Prometheus Server. First of all we need to create the ConfigMap contaning its configuration. In the Prometheus Server section you can see how to write a proper configuration file.
+
+```
+# scraping rules to be fed to Prometheus
+global:
+  scrape_interval: 10s
+  evaluation_interval: 10s 
+
+scrape_configs: 
+  - job_name: 'httpgo-pod'                    # httpgo pod
+    kubernetes_sd_configs:
+    - role: pod
+    relabel_configs:
+    - source_labels: [__meta_kubernetes_pod_label_app]
+      action: keep
+      regex: httpgo
+  - job_name: 'couchdb_and_exporter-pod'      # httpd pod
+    kubernetes_sd_configs:
+    - role: pod
+    relabel_configs:
+    - source_labels: [__meta_kubernetes_pod_label_app]
+      action: keep
+      regex: db-frontend
+  - job_name: 'apache_and_exporter-pod'       # couchDB pod
+    kubernetes_sd_configs:
+    - role: pod
+    relabel_configs:
+    - source_labels: [__meta_kubernetes_pod_label_app]
+      action: keep
+      regex: frontend
+```
 ```
 kubectl create namespace monitoring
 kubectl create configmap prometheus-example-cm --from-file configs/prometheus.yml -n monitoring
 ```
-Then, let's deploy Prometheus server itself, mounting that ConfigMap as volume ([manifest](manifests_no_configs/prometheus.yaml)
+Then, let's deploy Prometheus server itself, mounting that ConfigMap as volume.
+```
+# This manifest is used to create Prometheus deployment, service, ClusterRole and ClusterRoleBinding
+
+# create Prometheus deployment
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: monitoring
+spec:
+  replicas: 1
+  template:
+      metadata:
+        labels:
+          app: prometheus-server
+      spec:
+        containers:
+        - name: prometheus
+          image: prom/prometheus:v2.1.0
+          volumeMounts:
+          - name: config-volume
+            mountPath: /etc/prometheus/prometheus.yml
+            subPath: prometheus.yml
+          ports:
+          - containerPort: 9090
+        volumes:
+        - name: config-volume
+          configMap:
+            name: prometheus-example-cm
+---
+# create NodePort service
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-service
+  namespace: monitoring
+  annotations:
+    prometheus.io/scrape: 'true'
+    prometheus.io/path:   /
+    prometheus.io/port:   '8080'    
+spec:
+  selector: 
+    app: prometheus-server
+  type: NodePort  
+  ports:
+  - port: 8080
+    targetPort: 9090 
+    nodePort: 30999
+    name: prom-web
+---
+# create Cluster Role
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  name: prometheus
+rules:
+- apiGroups: [""]
+  resources:
+  - nodes
+  - nodes/proxy
+  - services
+  - endpoints
+  - pods
+  verbs: ["get", "list", "watch"]
+- apiGroups:
+  - extensions
+  resources:
+  - ingresses
+  verbs: ["get", "list", "watch"]
+- nonResourceURLs: ["/metrics"]
+  verbs: ["get"]
+---
+# create ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: prometheus
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: monitoring
+```
+
 ```
 kubectl apply -f manifests_no_configs/prometheus.yaml
 ```
-Analogously, we need to [configure](configs/prometheus_adapter.yml) and [deploy](manifests_no_configs/prometheus_adapter.yaml) the prometheus adapter deployment which will query prometheus and expose metrics through Custom Metrics API.
+Analogously, we need to configure and deploy the prometheus adapter deployment which will query prometheus and expose metrics through Custom Metrics API.
+```
+# rules to be fed to Prometheus Adapter in order to make it export through Custom Metrics API the desired metrics 
+rules:
+  - seriesQuery: 'myapphttp_process_open_fds'                 # metric for httpgo pod
+    resources:
+      template: "<<.Resource>>"
+    name:
+      matches: "^(.*)"
+      as: "${1}"
+    metricsQuery: 'avg(<<.Series>>) by (job)'
+    
+  - seriesQuery: 'apache_accesses_total'                      # metric for httpd pod
+    resources:
+      template: "<<.Resource>>"
+    name:
+      matches: "^(.*)_total"
+      as: "${1}_per_second"
+    metricsQuery: 'avg(rate(<<.Series>>[5m])) by (job)'
+    
+  - seriesQuery: 'couchdb_httpd_database_reads'                # metric for couchDB pod
+    resources:
+      template: "<<.Resource>>"
+    name:
+      matches: "^(.*)"
+      as: "${1}_per_second"
+    metricsQuery: 'avg(<<.Series>>) by (job)'
+```
 ```
 kubectl create configmap prometheus-adapter-example-cm --from-file configs/prometheus_adapter.yml
+```
+```
+# This manifest is used to deploy Prometheus Adapter.
+# Its configuration is provided through a ConfigMap.
+# This manifest defines: ServiceAccount, ClusterRole, ClusterRoleBinding, RoleBinding, Service, Deployment and APIService
+
+# create ServiceAccount
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app: prometheus-adapter
+    chart: prometheus-adapter-2.3.1
+  name: prometheus-adapter
+---
+
+# create ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app: prometheus-adapter
+    chart: prometheus-adapter-2.3.1
+  name: prometheus-adapter-server-resources
+rules:
+- apiGroups:
+  - custom.metrics.k8s.io
+  resources: ["*"]
+  verbs: ["*"]
+---
+# create ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app: prometheus-adapter
+    chart: prometheus-adapter-2.3.1
+  name: prometheus-adapter-resource-reader
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  - pods
+  - services
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+---
+# create ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app: prometheus-adapter
+    chart: prometheus-adapter-2.3.1
+  name: prometheus-adapter:system:auth-delegator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+subjects:
+- kind: ServiceAccount
+  name: prometheus-adapter
+  namespace: "default"
+---
+
+# create ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app: prometheus-adapter
+    chart: prometheus-adapter-2.3.1
+  name: prometheus-adapter-resource-reader
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: prometheus-adapter-resource-reader
+subjects:
+- kind: ServiceAccount
+  name: prometheus-adapter
+  namespace: "default"
+---
+
+#create ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app: prometheus-adapter
+    chart: prometheus-adapter-2.3.1
+  name: prometheus-adapter-hpa-controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: prometheus-adapter-server-resources
+subjects:
+- kind: ServiceAccount
+  name: prometheus-adapter
+  namespace: "default"
+---
+
+# create RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    app: prometheus-adapter
+    chart: prometheus-adapter-2.3.1
+  name: prometheus-adapter-auth-reader
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: extension-apiserver-authentication-reader
+subjects:
+- kind: ServiceAccount
+  name: prometheus-adapter
+  namespace: "default"
+---
+
+# create Service
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    {}
+  labels:
+    app: prometheus-adapter
+    chart: prometheus-adapter-2.3.1
+  name: prometheus-adapter
+spec:
+  ports:
+  - port: 443
+    protocol: TCP
+    targetPort: 6443
+    nodePort: 30007 
+    #targetPort: https
+  selector:
+    app: prometheus-adapter
+  type: NodePort
+
+---
+
+# create Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: prometheus-adapter
+    chart: prometheus-adapter-2.3.1
+  name: prometheus-adapter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus-adapter
+  template:
+    metadata:
+      labels:
+        app: prometheus-adapter
+        chart: prometheus-adapter-2.3.1
+      name: prometheus-adapter
+    spec:
+      serviceAccountName: prometheus-adapter
+      containers:
+      - name: prometheus-adapter
+        image: "directxman12/k8s-prometheus-adapter-amd64:v0.6.0"
+        imagePullPolicy: IfNotPresent
+        args:
+        - /adapter
+        - --secure-port=6443
+        - --cert-dir=/tmp/cert
+        - --logtostderr=true
+        - --prometheus-url=http://prometheus-service.monitoring.svc:8080/
+        - --metrics-relist-interval=1m
+        - --v=6
+        - --config=/etc/adapter/prometheus_adapter.yml
+        ports:
+        - containerPort: 6443
+          name: https
+        volumeMounts:
+        - mountPath: /etc/adapter/
+          name: config-volume
+          readOnly: true
+        - mountPath: /tmp
+          name: tmp
+      volumes:
+      - name: config-volume
+        configMap:
+          name: prometheus-adapter-example-cm
+      - name: tmp
+        emptyDir: {}
+---
+
+# create ApiService
+apiVersion: apiregistration.k8s.io/v1beta1
+kind: APIService
+metadata:
+  labels:
+    app: prometheus-adapter
+    chart: prometheus-adapter-2.3.1
+  name: v1beta1.custom.metrics.k8s.io
+spec:
+  service:
+    name: prometheus-adapter
+    namespace: "default"
+  group: custom.metrics.k8s.io
+  version: v1beta1
+  insecureSkipTLSVerify: true
+  groupPriorityMinimum: 100
+  versionPriority: 100
+```
+```
 kubectl apply -f manifests_no_configs/prometheus_adapter.yaml
 ```
 
-In the end, let's deploy the three Horizontal Pod Autoscalers ([httpgo](manifests_no_configs/hpa_hpptgo.yaml), [httpd](manifests_no_configs/hpa_httpd.yaml), [couchdb](manifests_no_configs/hpa_couchdb.yaml)) which will scale those three apps according to specific metrics:
+In the end, let's deploy the three Horizontal Pod Autoscalers (httpgo, httpd, couchdb) which will scale those three apps according to specific metrics:
 - httpgo: ```number of open file descriptors```
-- httpd: ```number of accesses per second```
-- couchDB: ```number of reads```
+  ```
+  # this manifest is used to deploy an hpa which scales httpgo deployment according to myapphttp_process_open_fds metric
 
-```
-kubectl apply -f manifests_no_configs/hpa_hpptgo.yaml
-kubectl apply -f manifests_no_configs/hpa_httpd.yaml
-kubectl apply -f manifests_no_configs/hpa_couchdb.yaml
-```
+  apiVersion: autoscaling/v2beta2
+  kind: HorizontalPodAutoscaler
+  metadata:
+    name: httpgo-hpa
+    namespace: default
+  spec:
+    scaleTargetRef:
+      apiVersion: apps/v1
+      kind: Deployment
+      name: httpgo
+    minReplicas: 1
+    maxReplicas: 10
+    metrics:
+
+    - type: Object
+      object:
+        metric:
+          name: myapphttp_process_open_fds
+        describedObject:
+          apiVersion: batch/v1
+          kind: Job
+          name: httpgo-pod
+        target:
+          type: Value
+          value: 0.5
+  ```
+  ```
+  kubectl apply -f manifests_no_configs/hpa_hpptgo.yaml
+  ```
+- httpd: ```number of accesses per second```
+  ```
+    # this manifest is used to deploy an horizontal pod autoscaler which scales httpd deployment according to apache_accesses_per_second metric
+
+  apiVersion: autoscaling/v2beta2
+  kind: HorizontalPodAutoscaler
+  metadata:
+    name: httpd-hpa
+    namespace: default
+  spec:
+    scaleTargetRef:
+      apiVersion: apps/v1
+      kind: Deployment
+      name: frontend
+    minReplicas: 1
+    maxReplicas: 10
+    metrics:
+
+    - type: Object
+      object:
+        metric:
+          name: apache_accesses_per_second
+        describedObject:
+          apiVersion: batch/v1
+          kind: Job
+          name: apache_and_exporter-pod
+        target:
+          type: Value
+          value: 0.5
+   ```
+   ```
+  kubectl apply -f manifests_no_configs/hpa_httpd.yaml
+  ```
+  
+- couchDB: ```number of reads```
+  ```
+  # this manifest is used to deploy an horizontal pod autoscaler which scales couchDB deployment according to couchdb_httpd_database_reads_per_second metric
+
+  apiVersion: autoscaling/v2beta2
+  kind: HorizontalPodAutoscaler
+  metadata:
+    name: couchdb-hpa
+    namespace: default
+  spec:
+    scaleTargetRef:
+      apiVersion: apps/v1
+      kind: Deployment
+      name: db-frontend
+    minReplicas: 1
+    maxReplicas: 10
+    metrics:
+    - type: Object 
+      object:
+        metric:
+          name: couchdb_httpd_database_reads_per_second
+        describedObject:
+          apiVersion: batch/v1
+          kind: Job
+          name: couchdb_and_exporter-pod
+        target:
+          type: Value
+          value: 0.5
+  ```
+  ```
+  kubectl apply -f manifests_no_configs/hpa_couchdb.yaml
+  ```
 
 <a name="quickstart"></a>
 ### Brig up playground with script
