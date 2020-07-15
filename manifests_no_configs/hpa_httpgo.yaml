@@ -24,4 +24,4 @@ spec:
         name: httpgo-pod
       target:
         type: Value
-        value: 0.5
+        value: 200
