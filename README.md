@@ -372,9 +372,9 @@ kubectl create configmap prometheus-adapter-example-cm --from-file configs/prome
 # Its configuration is provided through a ConfigMap.
 # This manifest defines: 
 #   - ServiceAccount, ClusterRole, ClusterRoleBinding, RoleBinding (to set permissions)
-    - Service 
-    - Deployment 
-    - APIService (Custom Metrics API)
+#   - Service 
+#   - Deployment 
+#   - APIService (Custom Metrics API)
 
 # create ServiceAccount
 apiVersion: v1
@@ -618,7 +618,7 @@ In the end, let's deploy the three Horizontal Pod Autoscalers (httpgo, httpd, co
           name: httpgo-pod
         target:
           type: Value
-          value: 0.5
+          value: 0.5    # threshold value
   ```
   ```
   kubectl apply -f manifests_no_configs/hpa_hpptgo.yaml
@@ -651,7 +651,7 @@ In the end, let's deploy the three Horizontal Pod Autoscalers (httpgo, httpd, co
           name: apache_and_exporter-pod
         target:
           type: Value
-          value: 0.5
+          value: 0.5    # threshold value
    ```
    ```
   kubectl apply -f manifests_no_configs/hpa_httpd.yaml
@@ -684,7 +684,7 @@ In the end, let's deploy the three Horizontal Pod Autoscalers (httpgo, httpd, co
           name: couchdb_and_exporter-pod
         target:
           type: Value
-          value: 0.5
+          value: 0.5      # threshold value
   ```
   ```
   kubectl apply -f manifests_no_configs/hpa_couchdb.yaml
@@ -763,7 +763,7 @@ To see if scaling is active:
 ```
 $ kubectl describe hpa
 ```
-For example, in our case the output of the hpa for httpgo server should be:
+For example, in our case, if the number of open fds of httpgo-pods increase, the output of the hpa for httpgo server should be:
 ```
 Name:                                                             httpgo-hpa
 Namespace:                                                        default
