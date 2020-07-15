@@ -33,7 +33,8 @@ First of all we need to deploy the three apps:
   
 Then, let's deploy the Prometheus Server. First of all we need to create the ConfigMap contaning its configuration. In the Prometheus Server section you can see how to write a proper [configuration file](configs/prometheus.yml).
 ```
-kubectl create configmap prometheus-example-cm --from-file configs/prometheus.yml
+kubectl create namespace monitoring
+kubectl create configmap prometheus-example-cm --from-file configs/prometheus.yml -n monitoring
 ```
 Then, let's deploy Prometheus server itself, mounting that ConfigMap as volume ([manifest](manifests_no_configs/prometheus.yaml)
 ```
@@ -41,7 +42,7 @@ kubectl apply -f manifests_no_configs/prometheus.yaml
 ```
 Analogously, we need to [configure](configs/prometheus_adapter.yml) and [deploy](manifests_no_configs/prometheus_adapter.yaml) the prometheus adapter deployment which will query prometheus and expose metrics through Custom Metrics API.
 ```
-kubectl create configmap prometheus-example-cm --from-file configs/prometheus_adapter.yml
+kubectl create configmap prometheus-adapter-example-cm --from-file configs/prometheus_adapter.yml
 kubectl apply -f manifests_no_configs/prometheus_adapter.yaml
 ```
 
@@ -55,8 +56,6 @@ kubectl apply -f manifests_no_configs/hpa_hpptgo.yaml
 kubectl apply -f manifests_no_configs/hpa_httpd.yaml
 kubectl apply -f manifests_no_configs/hpa_couchdb.yaml
 ```
-
-
 
 <a name="quickstart"></a>
 ### Brig up playground with script
@@ -79,8 +78,6 @@ to deploy:
 *Here NodePort services are used in order to make apps reachable from outside the cluster.*
 
 <a name="quickstart"></a>
-
-
 
 <a name="quickstart"></a>
 ### How to test and debug
