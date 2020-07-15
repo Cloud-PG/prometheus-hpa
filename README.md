@@ -7,7 +7,8 @@ This repository contains code to deploy an horizontal pod autoscaler on Kubernet
 <a name="quickstart"></a>
 ## Quick Start
 This repository requires a Kubernetes 1.13 installation (to do this at CERN https://github.com/dmwm/CMSKubernetes/blob/master/kubernetes/cmsweb/docs/end-to-end.md).
-We will install a Prometheus Server which will scrape metrics from some exporters. Prometheus time series will be then exposed for horizontal pod autoscalers using a Prometheus Adapter deployment.
+We will go through an example which shows how to scale our applications according to the values of some metrics collected by Prometheus. To do this, frist of all we need some exporters that make metrics about our third-party apps available to Prometheus Server: Prometheus will then regularly look for those exporters (scraping) and will save those metrics into "time series". In order to use those time series for autoscaling, we need a Prometheus Adapter that will get and manipulate those time series, and will then expose them through some API (Custom Metrics API). Now, k8s horizontal pod autoscalers can interact with Custom Metrics API and get those metrics values, creating replicas of our apps pods if those metrics values rise above some threshold. 
+Therefore, in this example we will install a Prometheus Server which will scrape metrics from some exporters. Prometheus time series will be then exposed for horizontal pod autoscalers using a Prometheus Adapter deployment.
 So, we will deploy three example apps with corresponding exporters, a Prometheus Server, a Prometheus Adapter and three different hpas, one for each app.
 The three apps we will use are:
 - ```httpgo server```: a basic HTTP server written in Go language (https://hub.docker.com/r/veknet/httpgo)
@@ -27,7 +28,7 @@ First of all we need to deploy the three apps:
   metadata:
     name: httpgo
   spec:
-    type: NodePort 
+    type: NodePort        # port accessible from outside the cluster
     ports:
     - port: 8888 
       protocol: TCP
@@ -79,7 +80,7 @@ First of all we need to deploy the three apps:
   metadata:
     name: frontend-svc
   spec:
-    type: NodePort
+    type: NodePort        # port accessible from outside the cluster 
     ports:
     - name: http
       port: 80
@@ -95,7 +96,7 @@ First of all we need to deploy the three apps:
   metadata:
     name: frontend-exporter-svc
   spec:
-    type: NodePort
+    type: NodePort        # port accessible from outside the cluster 
     ports:
     - name: exporter
       port: 9117
@@ -147,7 +148,7 @@ First of all we need to deploy the three apps:
   metadata:
     name: db-frontend-svc
   spec:
-    type: NodePort
+    type: NodePort          # port accessible from outside the cluster 
     ports:
     - name: http
       port: 5984
@@ -163,7 +164,7 @@ First of all we need to deploy the three apps:
   metadata:
     name: db-frontend-exporter-svc
   spec:
-    type: NodePort
+    type: NodePort          # port accessible from outside the cluster 
     ports:
     - name: exporter
       port: 9984
@@ -206,36 +207,39 @@ First of all we need to deploy the three apps:
   kubectl apply -f manifests_no_configs/couchdb_and_exporter.yaml
   ```
   
-Then, let's deploy the Prometheus Server. First of all we need to create the ConfigMap contaning its configuration. In the Prometheus Server section you can see how to write a proper configuration file.
+Then, let's deploy the Prometheus Server. First of all we need to create the ConfigMap containing its configuration. In the Prometheus Server section you can see how to write a proper configuration file.
 
 ```
-# scraping rules to be fed to Prometheus
+# rules to be fed to Prometheus in order to make it look for the desired exporters
 global:
   scrape_interval: 10s
   evaluation_interval: 10s 
 
-scrape_configs: 
-  - job_name: 'httpgo-pod'                    # httpgo pod
+scrape_configs:
+
+  - job_name: 'httpgo-pod'                    # look for an exporter inside "httpgo" pod (httpgo)
     kubernetes_sd_configs:
     - role: pod
     relabel_configs:
     - source_labels: [__meta_kubernetes_pod_label_app]
       action: keep
       regex: httpgo
-  - job_name: 'couchdb_and_exporter-pod'      # httpd pod
-    kubernetes_sd_configs:
-    - role: pod
-    relabel_configs:
-    - source_labels: [__meta_kubernetes_pod_label_app]
-      action: keep
-      regex: db-frontend
-  - job_name: 'apache_and_exporter-pod'       # couchDB pod
+      
+  - job_name: 'apache_and_exporter-pod'       # look for an exporter inside "frontend" pod (httpd) 
     kubernetes_sd_configs:
     - role: pod
     relabel_configs:
     - source_labels: [__meta_kubernetes_pod_label_app]
       action: keep
       regex: frontend
+      
+  - job_name: 'couchdb_and_exporter-pod'      # look for an exporter inside "db-frontend" pod (couchDB)
+    kubernetes_sd_configs:
+    - role: pod
+    relabel_configs:
+    - source_labels: [__meta_kubernetes_pod_label_app]
+      action: keep
+      regex: db-frontend
 ```
 ```
 kubectl create namespace monitoring
@@ -243,7 +247,7 @@ kubectl create configmap prometheus-example-cm --from-file configs/prometheus.ym
 ```
 Then, let's deploy Prometheus server itself, mounting that ConfigMap as volume.
 ```
-# This manifest is used to create Prometheus deployment, service, ClusterRole and ClusterRoleBinding
+# This manifest is used to create Prometheus Deployment, Service, ClusterRole and ClusterRoleBinding
 
 # create Prometheus deployment
 apiVersion: extensions/v1beta1
@@ -263,14 +267,14 @@ spec:
           image: prom/prometheus:v2.1.0
           volumeMounts:
           - name: config-volume
-            mountPath: /etc/prometheus/prometheus.yml
+            mountPath: /etc/prometheus/prometheus.yml   
             subPath: prometheus.yml
           ports:
           - containerPort: 9090
         volumes:
         - name: config-volume
           configMap:
-            name: prometheus-example-cm
+            name: prometheus-example-cm         # configmap containing configuration rules
 ---
 # create NodePort service
 apiVersion: v1
@@ -285,9 +289,9 @@ metadata:
 spec:
   selector: 
     app: prometheus-server
-  type: NodePort  
+  type: NodePort        # port accessible from outside the cluster                                       
   ports:
-  - port: 8080
+  - port: 8080                                       
     targetPort: 9090 
     nodePort: 30999
     name: prom-web
@@ -336,29 +340,29 @@ Analogously, we need to configure and deploy the prometheus adapter deployment w
 ```
 # rules to be fed to Prometheus Adapter in order to make it export through Custom Metrics API the desired metrics 
 rules:
-  - seriesQuery: 'myapphttp_process_open_fds'                 # metric for httpgo pod
+  - seriesQuery: 'myapphttp_process_open_fds'                 # time series name to look for inside Prometheus (myapphttp_process_open_fds, related to httpgo)
     resources:
-      template: "<<.Resource>>"
+      template: "<<.Resource>>"                               # assign resource (job)
     name:
-      matches: "^(.*)"
+      matches: "^(.*)"                                        # change name if necessary (keep as is)
       as: "${1}"
-    metricsQuery: 'avg(<<.Series>>) by (job)'
+    metricsQuery: 'avg(<<.Series>>) by (job)'                 # manipulate result (average through all pods) 
     
-  - seriesQuery: 'apache_accesses_total'                      # metric for httpd pod
+  - seriesQuery: 'apache_accesses_total'                      # time series name to look for inside Prometheus (apache_accesses_total, related to httpd pod)
     resources:
-      template: "<<.Resource>>"
+      template: "<<.Resource>>"                               # assign resource (job)
     name:
-      matches: "^(.*)_total"
+      matches: "^(.*)_total"                                  # change name if necessary (change suffix from total to per_second)
       as: "${1}_per_second"
-    metricsQuery: 'avg(rate(<<.Series>>[5m])) by (job)'
+    metricsQuery: 'avg(rate(<<.Series>>[5m])) by (job)'       # manipulate result (calculate a rate per second using 5 minutes information and average through all pods) 
     
-  - seriesQuery: 'couchdb_httpd_database_reads'                # metric for couchDB pod
+  - seriesQuery: 'couchdb_httpd_database_reads'               # time series name to look for inside Prometheus (couchdb_httpd_database_reads, related to couchDB)
     resources:
-      template: "<<.Resource>>"
+      template: "<<.Resource>>"                               # assign resource (job)
     name:
-      matches: "^(.*)"
-      as: "${1}_per_second"
-    metricsQuery: 'avg(<<.Series>>) by (job)'
+      matches: "^(.*)"                                        # change name if necessary (keep as is)
+      as: "${1}"
+    metricsQuery: 'avg(<<.Series>>) by (job)'                 # manipulate result (average through all pods) 
 ```
 ```
 kubectl create configmap prometheus-adapter-example-cm --from-file configs/prometheus_adapter.yml
@@ -366,7 +370,11 @@ kubectl create configmap prometheus-adapter-example-cm --from-file configs/prome
 ```
 # This manifest is used to deploy Prometheus Adapter.
 # Its configuration is provided through a ConfigMap.
-# This manifest defines: ServiceAccount, ClusterRole, ClusterRoleBinding, RoleBinding, Service, Deployment and APIService
+# This manifest defines: 
+#   - ServiceAccount, ClusterRole, ClusterRoleBinding, RoleBinding (to set permissions)
+    - Service 
+    - Deployment 
+    - APIService (Custom Metrics API)
 
 # create ServiceAccount
 apiVersion: v1
@@ -500,7 +508,7 @@ spec:
   - port: 443
     protocol: TCP
     targetPort: 6443
-    nodePort: 30007 
+    nodePort: 30007                   # port accessible from outside the cluster
     #targetPort: https
   selector:
     app: prometheus-adapter
@@ -538,7 +546,7 @@ spec:
         - --secure-port=6443
         - --cert-dir=/tmp/cert
         - --logtostderr=true
-        - --prometheus-url=http://prometheus-service.monitoring.svc:8080/
+        - --prometheus-url=http://prometheus-service.monitoring.svc:8080/   # url to Prometheus service
         - --metrics-relist-interval=1m
         - --v=6
         - --config=/etc/adapter/prometheus_adapter.yml
@@ -554,7 +562,7 @@ spec:
       volumes:
       - name: config-volume
         configMap:
-          name: prometheus-adapter-example-cm
+          name: prometheus-adapter-example-cm               # configmap containing rules for Prometheus Adapter
       - name: tmp
         emptyDir: {}
 ---
