@@ -618,7 +618,7 @@ In the end, let's deploy the three Horizontal Pod Autoscalers (httpgo, httpd, co
           name: httpgo-pod
         target:
           type: Value
-          value: 0.5    # threshold value
+          value: 200    # threshold value
   ```
   ```
   kubectl apply -f manifests_no_configs/hpa_hpptgo.yaml
