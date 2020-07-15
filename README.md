@@ -6,29 +6,14 @@ This repository contains code to deploy an horizontal pod autoscaler on Kubernet
 
 <a name="quickstart"></a>
 ## Quick Start
-This repository requires a Kubernetes 1.13 installation.
+This repository requires a Kubernetes 1.13 installation (to do this at CERN https://github.com/dmwm/CMSKubernetes/blob/master/kubernetes/cmsweb/docs/end-to-end.md).
+We will install a Prometheus Server which will scrape metrics from some exporters. Prometheus time series will be then exposed for horizontal pod autoscalers using a Prometheus Adapter deployment.
+So, we will deploy three example apps with corresponding exporters, a Prometheus Server, a Prometheus Adapter and three different hpas, one for each app.
+The three apps we will use are:
+- ```httpgo server```: a basic HTTP server written in Go language (https://hub.docker.com/r/veknet/httpgo)
+- ```httpd server```: one of the most famous open-source HTTP servers (https://httpd.apache.org/)
+- ```couchDB```: an open-source document-oriented NoSQL database, implemented in Erlang (https://couchdb.apache.org/)
 
-<a name="quickstart"></a>
-### Brig up playground with script
-Just type
-```
-sh deploy.sh
-```
-to deploy:
-- three different apps:
-  - a pod with httpgo server and a process exporter - exposed through NodePort service
-  - a pod with httpd server and an apache exporter - exposed through NodePort service
-  - a pod with CouchDB and a couchDB exporter - exposed through NodePort service
-- a Prometheus server
-- a Prometheus adapter pod
-- three different horizontal pod autoscalers to scale each app (up to 10 replicas) accornding to a specific metric:
-  - httpgo: ```number of open file descriptors```
-  - httpd: ```number of accesses per second```
-  - couchDB: ```number of reads```
-
-*Here NodePort services are used in order to make apps reachable from outside the cluster.*
-
-<a name="quickstart"></a>
 ### Step-by-step configuration
 First of all we need to deploy the three apps:
 - ```httpgo server```: in this case, our deployment will use ```ttedesch/httpgo_exporter:latest``` image, which is built inserting process_exporter process inside ```veknet/httpgo``` image. Dockerfile, entrypoint and scripts used can be found [here](httpgo_exporter). The deployment file is [this](manifests_no_configs/httpgo_and_exporter.yaml). A Nodeport service exposes port 31000 in order to make the httpgo reachable from outside.
@@ -74,50 +59,153 @@ kubectl apply -f manifests_no_configs/hpa_couchdb.yaml
 
 
 <a name="quickstart"></a>
+### Brig up playground with script
+Just type
+```
+sh deploy.sh
+```
+to deploy:
+- three different apps:
+  - a pod with httpgo server and a process exporter - exposed through NodePort service
+  - a pod with httpd server and an apache exporter - exposed through NodePort service
+  - a pod with CouchDB and a couchDB exporter - exposed through NodePort service
+- a Prometheus server
+- a Prometheus adapter pod
+- three different horizontal pod autoscalers to scale each app (up to 10 replicas) accornding to a specific metric:
+  - httpgo: ```number of open file descriptors```
+  - httpd: ```number of accesses per second```
+  - couchDB: ```number of reads```
+
+*Here NodePort services are used in order to make apps reachable from outside the cluster.*
+
+<a name="quickstart"></a>
+
+
+
+<a name="quickstart"></a>
 ### How to test and debug
-The prometheus webUI is available at ```http://<masternode-publicIP>:<PrometheusService-nodePort>```:
-
+The prometheus webUI is available at ```http://<masternode-publicIP>:<PrometheusService-nodePort>```. A generic time series should look like this:
 ![webUI](prometheus_WebUI.png)
-
-
 
 The exposed metrics can be seen running:
 ```
 $ kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1/ | jq
+```
+For example, in our case, the output should be:
+```
+{
+  "kind": "APIResourceList",
+  "apiVersion": "v1",
+  "groupVersion": "custom.metrics.k8s.io/v1beta1",
+  "resources": [
+    {
+      "name": "jobs.batch/couchdb_httpd_database_reads_per_second",
+      "singularName": "",
+      "namespaced": true,
+      "kind": "MetricValueList",
+      "verbs": [
+        "get"
+      ]
+    },
+    {
+      "name": "jobs.batch/myapphttp_process_open_fds",
+      "singularName": "",
+      "namespaced": true,
+      "kind": "MetricValueList",
+      "verbs": [
+        "get"
+      ]
+    },
+    {
+      "name": "jobs.batch/apache_accesses_per_second",
+      "singularName": "",
+      "namespaced": true,
+      "kind": "MetricValueList",
+      "verbs": [
+        "get"
+      ]
+    }
+  ]
+}
 ```
 
 To see if scaling is active:
 ```
 $ kubectl describe hpa
 ```
+For example, in our case the output of the hpa for httpgo server should be:
+```
+Name:                                                             httpgo-hpa
+Namespace:                                                        default
+Labels:                                                           <none>
+Annotations:                                                      kubectl.kubernetes.io/last-applied-configuration:
+                                                                    {"apiVersion":"autoscaling/v2beta2","kind":"HorizontalPodAutoscaler","metadata":{"annotations":{},"n
+ame":"httpgo-hpa","namespace":"default...
+CreationTimestamp:                                                Wed, 15 Jul 2020 13:15:25 +0200
+Reference:                                                        Deployment/httpgo
+Metrics:                                                          ( current / target )
+  "myapphttp_process_open_fds" on Job/httpgo-pod (target value):  6 / 500m
+Min replicas:                                                     1
+Max replicas:                                                     10
+Deployment pods:                                                  10 current / 10 desired
+Conditions:
+  Type            Status  Reason            Message
+  ----            ------  ------            -------
+  AbleToScale     True    ReadyForNewScale  recommended size matches current size
+  ScalingActive   True    ValidMetricFound  the HPA was able to successfully calculate a replica count from Job metric myapphttp_process_open_fds
+  ScalingLimited  True    TooManyReplicas   the desired replica count is more than the maximum replica count
+Events:
+  Type     Reason                        Age                    From                       Message
+  ----     ------                        ----                   ----                       -------
+  Normal   SuccessfulRescale             5m31s                  horizontal-pod-autoscaler  New size: 4; reason: Job metric myapphttp_process_open_fds above target      
+  Normal   SuccessfulRescale             5m16s                  horizontal-pod-autoscaler  New size: 8; reason: Job metric myapphttp_process_open_fds above target      
+  Normal   SuccessfulRescale             5m                     horizontal-pod-autoscaler  New size: 10; reason: Job metric myapphttp_process_open_fds above target     
+```
+
 <a name="quickstart"></a>
+
 ## To expose additional metrics
 To expose additional metrics just modify [configs/prometheus_adapter.yml](configs/prometheus_adapter.yml) adding rules for exporting the desired Prometheus metrics.
 
+For example, just add:
+```
+rules:
+  - seriesQuery: 'apache_cpuload'  
+    resources:
+      template: "<<.Resource>>"
+    name:
+      matches: "^(.*)"
+      as: "${1}"
+    metricsQuery: 'avg(<<.Series>>) by (job)'
+```
+to expose apache_cpuload metric averaged through all httpd pods.
+
+# Components - in-depth view
+
 <a name="quickstart"></a>
-# Exporter 
+## Exporter 
 This component retrives metrics coming from third-party's applications and make them available to Prometheus server. As an example we will see three different types of exporters associated to different kinds of applications.
 
 <a name="quickstart"></a>
-## Process Exporter
+### Process Exporter
 https://github.com/ncabatoff/process-exporter
 
 Prometheus exporter that mines /proc to report on selected processes.
 
 <a name="quickstart"></a>
-## Apache Exporter
+### Apache Exporter
 https://github.com/Lusitaniae/apache_exporter
 
 Apache Exporter is a Prometheus exporter for Apache metrics that exports Apache server status reports generated by ```mod_status``` with the URL of ```http://127.0.0.1/server-status/?auto```.
 
 <a name="quickstart"></a>
-## CouchDB Exporter
+### CouchDB Exporter
 https://github.com/gesellix/couchdb-prometheus-exporter
 
 The CouchDB metrics exporter requests the CouchDB stats from the /_stats and /_active_tasks endpoints and exposes them for Prometheus consumption.
 
 <a name="quickstart"></a>
-# Prometheus
+## Prometheus
 https://prometheus.io/docs/prometheus/latest/configuration/configuration/
 
 This is the Prometheus server itself, which collects all metrics from various exporters in the form of time series. Those can be accessed and visualized through a WebUI.
@@ -136,7 +224,7 @@ For our purposes, the only sections we will use are:
     - ```ingress```: The ingress role discovers a target for each path of each ingress. This is generally useful for blackbox monitoring of an ingress. The address will be set to the host specified in the ingress spec.
 
 <a name="quickstart"></a>
-## Example
+### Example
 ```
     global:                                                         # How frequently to scrape targets and evaluate rules by default
       scrape_interval: 10s
@@ -156,7 +244,7 @@ For our purposes, the only sections we will use are:
           regex: httpgo
 ```
 <a name="quickstart"></a>
-# Prometheus Adapter
+## Prometheus Adapter
 https://github.com/DirectXMan12/k8s-prometheus-adapter/blob/master/docs/config.md
 
 The Prometheus Adapter application selects (and manipulates) certain time series from Prometheus Server and exposes them through Custom Metrics API in order to make them available to the Horizontal Pod Autoscaler.
@@ -180,7 +268,7 @@ There are two ways to associate resources with a particular metric, using two di
   - ```GroupBy```: a comma-separated list of labels to group by. Currently, this contains the group-resource label used in ```LabelMatchers```.
 
 <a name="quickstart"></a>
-## Example
+### Example
 ```
   rules:
   - seriesQuery: 'testmetric_total{instance="10.100.1.135:18000",job="kubernetes-pods"}'          # DISCOVERY of process_exporter_load1 time series with certain instance and job labels
@@ -193,7 +281,7 @@ There are two ways to associate resources with a particular metric, using two di
 ```
 
 <a name="quickstart"></a>
-# Horizontal Pod Autoscaler
+## Horizontal Pod Autoscaler
 https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale-walkthrough/#autoscaling-on-multiple-metrics-and-custom-metrics
 
 By making use of the autoscaling/v2beta2 API version you can introduce metrics to use when autoscaling a deployment. The Horizontal Pod Autoscaler is implemented as a control loop that periodically queries a metrics API. There are three types of metrics:
@@ -207,7 +295,7 @@ By making use of the autoscaling/v2beta2 API version you can introduce metrics t
 - ```External metrics```: based on a metric from an application or service external to your cluster, exposed through ```external.metrics.k8s.io``` API (```External type```).
 
 <a name="quickstart"></a>
-## Example
+### Example
 ```
 apiVersion: autoscaling/v2beta2     
 kind: HorizontalPodAutoscaler
