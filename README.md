@@ -92,7 +92,7 @@ $ kubectl describe hpa
 ```
 <a name="quickstart"></a>
 ## To expose additional metrics
-
+To expose additional metrics just modify [configs/prometheus_adapter.yml](configs/prometheus_adapter.yml) adding rules for exporting the desired Prometheus metrics.
 
 <a name="quickstart"></a>
 # Exporter 
