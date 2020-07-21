@@ -7,6 +7,7 @@ This repository contains code to deploy an horizontal pod autoscaler on Kubernet
 <a name="quickstart"></a>
 ## Quick Start
 This repository requires a Kubernetes 1.13 installation (to do this at CERN https://github.com/dmwm/CMSKubernetes/blob/master/kubernetes/cmsweb/docs/end-to-end.md).
+
 We will go through an example which shows how to scale our applications according to the values of some metrics collected by Prometheus. 
 
 To do this, frist of all we need some exporters that make metrics about our third-party apps available to Prometheus Server.
