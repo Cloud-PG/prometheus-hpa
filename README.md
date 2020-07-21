@@ -7,8 +7,15 @@ This repository contains code to deploy an horizontal pod autoscaler on Kubernet
 <a name="quickstart"></a>
 ## Quick Start
 This repository requires a Kubernetes 1.13 installation (to do this at CERN https://github.com/dmwm/CMSKubernetes/blob/master/kubernetes/cmsweb/docs/end-to-end.md).
-We will go through an example which shows how to scale our applications according to the values of some metrics collected by Prometheus. To do this, frist of all we need some exporters that make metrics about our third-party apps available to Prometheus Server: Prometheus will then regularly look for those exporters (scraping) and will save those metrics into "time series". In order to use those time series for autoscaling, we need a Prometheus Adapter that will get and manipulate those time series, and will then expose them through some API (Custom Metrics API). Now, k8s horizontal pod autoscalers can interact with Custom Metrics API and get those metrics values, creating replicas of our apps pods if those metrics values rise above some threshold. 
+
+We will go through an example which shows how to scale our applications according to the values of some metrics collected by Prometheus. To do this, frist of all we need some exporters that make metrics about our third-party apps available to Prometheus Server: Prometheus will then regularly look for those exporters (scraping) and will save those metrics into "time series". 
+
+In order to use those time series for autoscaling, we need a Prometheus Adapter that will get and manipulate those time series, and will then expose them through some API (Custom Metrics API). 
+
+Now, k8s horizontal pod autoscalers can interact with Custom Metrics API and get those metrics values, creating replicas of our apps pods if those metrics values rise above some threshold. 
+
 Therefore, in this example we will install a Prometheus Server which will scrape metrics from some exporters. Prometheus time series will be then exposed for horizontal pod autoscalers using a Prometheus Adapter deployment.
+
 So, we will deploy three example apps with corresponding exporters, a Prometheus Server, a Prometheus Adapter and three different hpas, one for each app.
 The three apps we will use are:
 - ```httpgo server```: a basic HTTP server written in Go language (https://hub.docker.com/r/veknet/httpgo)
@@ -691,7 +698,7 @@ In the end, let's deploy the three Horizontal Pod Autoscalers (httpgo, httpd, co
   ```
 
 <a name="quickstart"></a>
-### Brig up playground with script
+### Bring up playground with script
 Just type
 ```
 sh deploy.sh
@@ -783,8 +790,8 @@ spec:
 Now let's generate load artificially on httpgo server using hey tool (https://github.com/vkuznet/hey)
 ```
 go get -u github.com/rakyll/hey
-PATH="$GOPATH/bin:$PATH"
 export GOPATH="$HOME/go"
+PATH="$GOPATH/bin:$PATH"
 hey -q 10 -c 1000 -z 1m http://test-cluster-lciavsdzsham-node-0.cern.ch/http
 ```
 This should increase the value of our metric (the average number of open fds of httpgo-pods) and trigger the autoscaler. To see it in action:
