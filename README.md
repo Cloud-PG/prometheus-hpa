@@ -6,6 +6,37 @@ This repository contains code to deploy an horizontal pod autoscaler on Kubernet
 
 <a name="quickstart"></a>
 ## Quick Start
+### How to deploy HPA
+```
+# deploy services
+kubectl apply -f manifests_no_configs/httpgo_and_exporter.yaml
+kubectl apply -f manifests_no_configs/httpd_and_exporter.yaml
+kubectl apply -f manifests_no_configs/couchdb_and_exporter.yaml
+
+# deploy monitoring, here prometheus.yaml uses prometheus-example-cm
+# and promeetheus_adapter.yaml uses prometheus-adapter-example-cm
+kubectl create namespace monitoring
+kubectl create configmap prometheus-example-cm --from-file configs/prometheus.yml -n monitoring
+kubectl apply -f manifests_no_configs/prometheus.yaml
+kubectl create configmap prometheus-adapter-example-cm --from-file configs/prometheus_adapter.yml -n monitoring
+kubectl apply -f manifests_no_configs/prometheus_adapter.yaml
+
+# deploy hpa
+kubectl apply -f manifests_no_configs/hpa_hpptgo.yaml
+kubectl apply -f manifests_no_configs/hpa_httpd.yaml
+kubectl apply -f manifests_no_configs/hpa_couchdb.yaml
+kubectl describe hpa
+
+# check prometheus metrics
+kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1/ | jq
+```
+
+Here the `configs/prometheus_adapter.yml` contains all rules for hap metrics we'll use in
+Prometheus, e.g. `process_open_fds` or `apache_accesses_total` or `couchdb_httpd_database_reads`.
+The `configs/prometheys.yml` configuration sets the apps to monitor.
+The `hpa_*.yaml` files contains horizontal pod autoscaler values to trigger on.
+
+## Detailed procedure
 This repository requires a Kubernetes 1.13 installation (to do this at CERN https://github.com/dmwm/CMSKubernetes/blob/master/kubernetes/cmsweb/docs/end-to-end.md).
 
 We will go through an example which shows how to scale our applications according to the values of some metrics collected by Prometheus. 
