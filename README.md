@@ -968,11 +968,11 @@ There are two ways to associate resources with a particular metric, using two di
 ### Example
 ```
   rules:
-  - seriesQuery: 'testmetric_total{instance="10.100.1.135:18000",job="kubernetes-pods"}'          # DISCOVERY of process_exporter_load1 time series with certain instance and job labels
+  - seriesQuery: 'testmetric_total{instance="10.100.1.135:18000",job="kubernetes-pods"}'          # DISCOVERY of testmetric_total time series with certain instance and job labels
     resources:
       template: "<<.Resource>>"                                                                   # ASSOCIATION of that metric to the resource which is present in the labels (job.batch)
     name:
-      matches: "^(.*)_total"                                                                      # NAMING of the metric: modify the last part of the name, from testmetric_total to test_metric_per_second
+      matches: "^(.*)_total"                                                                      # NAMING of the metric: modify the last part of the name, from testmetric_total to testmetric_per_second
       as: "${1}_per_second"
     metricsQuery: 'sum(rate(<<.Series>>{<<.LabelMatchers>>}[2m])) by (<<.GroupBy>>)'              # QUERYING of the metric, calculating a rate value averaged every 2 minutes and summing up                                                                    
 ```
