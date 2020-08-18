@@ -10,6 +10,9 @@ scrape_configs:
     - source_labels: [__meta_kubernetes_pod_label_app]
       action: keep
       regex: httpgo
+    - source_labels: [__meta_kubernetes_namespace]
+      action: replace
+      target_label: kubernetes_namespace
   - job_name: 'couchdb_and_exporter-pod'
     kubernetes_sd_configs:
     - role: pod
@@ -17,6 +20,9 @@ scrape_configs:
     - source_labels: [__meta_kubernetes_pod_label_app]
       action: keep
       regex: db-frontend
+    - source_labels: [__meta_kubernetes_namespace]
+      action: replace
+      target_label: kubernetes_namespace
   - job_name: 'apache_and_exporter-pod'
     kubernetes_sd_configs:
     - role: pod
@@ -24,3 +30,6 @@ scrape_configs:
     - source_labels: [__meta_kubernetes_pod_label_app]
       action: keep
       regex: frontend
+    - source_labels: [__meta_kubernetes_namespace]
+      action: replace
+      target_label: kubernetes_namespace
