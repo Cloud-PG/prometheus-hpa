@@ -4,7 +4,7 @@ apiVersion: autoscaling/v2beta2
 kind: HorizontalPodAutoscaler
 metadata:
   name: httpd-hpa
-  namespace: default
+  namespace: frontend
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
