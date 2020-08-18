@@ -9,9 +9,12 @@ This repository contains code to deploy an horizontal pod autoscaler on Kubernet
 ### How to deploy HPA
 ```
 # deploy services
-kubectl apply -f manifests_no_configs/httpgo_and_exporter.yaml
-kubectl apply -f manifests_no_configs/httpd_and_exporter.yaml
-kubectl apply -f manifests_no_configs/couchdb_and_exporter.yaml
+kubectl create namespace http
+kubectl create namespace frontend
+kubectl create namespace database
+kubectl apply -f manifests_no_configs/httpgo_and_exporter.yaml -n http
+kubectl apply -f manifests_no_configs/httpd_and_exporter.yaml -n frontend
+kubectl apply -f manifests_no_configs/couchdb_and_exporter.yaml -n database
 
 # deploy monitoring, here prometheus.yaml uses prometheus-example-cm
 # and promeetheus_adapter.yaml uses prometheus-adapter-example-cm
@@ -836,7 +839,7 @@ $ kubectl describe hpa
 The output of the hpa for httpgo server should be something like this:
 ```
 Name:                                                             httpgo-hpa
-Namespace:                                                        default
+Namespace:                                                        http
 Labels:                                                           <none>
 Annotations:                                                      CreationTimestamp:  Wed, 15 Jul 2020 19:10:32 +0200
 Reference:                                                        Deployment/httpgo
@@ -998,7 +1001,7 @@ apiVersion: autoscaling/v2beta2
 kind: HorizontalPodAutoscaler
     metadata:                               # metadata of the autoscaler
   name: httpgo-hpa 
-  namespace: default
+  namespace: http
 spec:
   scaleTargetRef:                           # spec of the Kubernetes resource to be scaled (in this case a Deployment)
     apiVersion: apps/v1   
