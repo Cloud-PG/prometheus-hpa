@@ -739,7 +739,8 @@ In the end, let's deploy the three Horizontal Pod Autoscalers (httpgo, httpd, co
 ### Bring up playground with script
 Just type
 ```
-sh deploy.sh
+./deploy.sh create
+./deploy.sh scale
 ```
 to deploy:
 - three different apps:
